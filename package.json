@@ -1,0 +1,132 @@
+{
+  "name": "textblockly",
+  "displayName": "TextBlockly",
+  "description": "Arduino visual programming with Blockly integration and code synchronization",
+  "version": "0.1.0",
+  "publisher": "textblockly",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Education",
+    "Programming Languages",
+    "Snippets"
+  ],
+  "keywords": [
+    "arduino",
+    "blockly",
+    "visual programming",
+    "education",
+    "iot"
+  ],
+  "activationEvents": [
+    "onLanguage:arduino"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "textblockly.openBlocklyView",
+        "title": "Open Blockly View",
+        "category": "TextBlockly"
+      },
+      {
+        "command": "textblockly.syncCodeToBlocks",
+        "title": "Sync Code to Blocks",
+        "category": "TextBlockly"
+      },
+      {
+        "command": "textblockly.syncBlocksToCode",
+        "title": "Sync Blocks to Code",
+        "category": "TextBlockly"
+      },
+      {
+        "command": "textblockly.openTemplateManager",
+        "title": "Open Template Manager",
+        "category": "TextBlockly"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "resourceExtname == .ino",
+          "command": "textblockly.openBlocklyView",
+          "group": "textblockly"
+        }
+      ],
+      "explorer/context": [
+        {
+          "when": "resourceExtname == .ino",
+          "command": "textblockly.openBlocklyView",
+          "group": "textblockly"
+        }
+      ]
+    },
+    "languages": [
+      {
+        "id": "arduino",
+        "aliases": ["Arduino", "arduino"],
+        "extensions": [".ino"]
+      }
+    ],
+    "configuration": {
+      "title": "TextBlockly",
+      "properties": {
+        "textblockly.autoSync": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically sync between blocks and code"
+        },
+        "textblockly.templatePath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path for storing block templates"
+        },
+        "textblockly.previewMode": {
+          "type": "string",
+          "enum": ["split", "tab", "overlay"],
+          "default": "split",
+          "description": "How to display the Blockly view"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "webpack --mode production",
+    "watch": "webpack --mode development --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src --ext ts",
+    "lint:fix": "eslint src --ext ts --fix",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "^18.x",
+    "@types/jest": "^29.5.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.40.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "jest": "^29.5.0",
+    "prettier": "^2.8.8",
+    "ts-jest": "^29.1.0",
+    "ts-loader": "^9.4.2",
+    "typescript": "^5.0.4",
+    "webpack": "^5.82.0",
+    "webpack-cli": "^5.1.1",
+    "@vscode/test-electron": "^2.3.0",
+    "vsce": "^2.15.0"
+  },
+  "dependencies": {
+    "blockly": "^10.2.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/textblockly/textblockly.git"
+  },
+  "license": "MIT"
+}
