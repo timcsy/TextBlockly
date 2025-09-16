@@ -65,8 +65,13 @@
     "languages": [
       {
         "id": "arduino",
-        "aliases": ["Arduino", "arduino"],
-        "extensions": [".ino"]
+        "aliases": [
+          "Arduino",
+          "arduino"
+        ],
+        "extensions": [
+          ".ino"
+        ]
       }
     ],
     "configuration": {
@@ -84,7 +89,11 @@
         },
         "textblockly.previewMode": {
           "type": "string",
-          "enum": ["split", "tab", "overlay"],
+          "enum": [
+            "split",
+            "tab",
+            "overlay"
+          ],
           "default": "split",
           "description": "How to display the Blockly view"
         }
@@ -103,11 +112,12 @@
     "package": "vsce package"
   },
   "devDependencies": {
-    "@types/vscode": "^1.74.0",
-    "@types/node": "^18.x",
     "@types/jest": "^29.5.0",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
+    "@types/node": "^18.x",
+    "@types/vscode": "^1.74.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vscode/test-electron": "^2.3.0",
     "eslint": "^8.40.0",
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-prettier": "^4.2.1",
@@ -116,10 +126,9 @@
     "ts-jest": "^29.1.0",
     "ts-loader": "^9.4.2",
     "typescript": "^5.0.4",
+    "vsce": "^2.15.0",
     "webpack": "^5.82.0",
-    "webpack-cli": "^5.1.1",
-    "@vscode/test-electron": "^2.3.0",
-    "vsce": "^2.15.0"
+    "webpack-cli": "^5.1.1"
   },
   "dependencies": {
     "blockly": "^10.2.2"

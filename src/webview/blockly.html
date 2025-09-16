@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TextBlockly - Arduino Visual Programming</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--vscode-editor-background);
+            color: var(--vscode-editor-foreground);
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        .toolbar {
+            background-color: var(--vscode-titleBar-activeBackground);
+            color: var(--vscode-titleBar-activeForeground);
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toolbar button {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+
+        .toolbar button:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+
+        .toolbar button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .blockly-area {
+            flex: 1;
+            position: relative;
+        }
+
+        #blocklyDiv {
+            height: 100%;
+            width: 100%;
+        }
+
+        .code-preview {
+            width: 300px;
+            background-color: var(--vscode-sideBar-background);
+            border-left: 1px solid var(--vscode-panel-border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .code-preview-header {
+            padding: 8px 12px;
+            background-color: var(--vscode-sideBarSectionHeader-background);
+            color: var(--vscode-sideBarSectionHeader-foreground);
+            font-weight: bold;
+            font-size: 12px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+        }
+
+        .code-preview-content {
+            flex: 1;
+            overflow: auto;
+        }
+
+        #codePreview {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: var(--vscode-editor-background);
+            color: var(--vscode-editor-foreground);
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            padding: 12px;
+            resize: none;
+            outline: none;
+        }
+
+        .status-bar {
+            background-color: var(--vscode-statusBar-background);
+            color: var(--vscode-statusBar-foreground);
+            padding: 4px 16px;
+            font-size: 11px;
+            border-top: 1px solid var(--vscode-panel-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .loading {
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid transparent;
+            border-top: 2px solid var(--vscode-progressBar-background);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background-color: var(--vscode-inputValidation-errorBackground);
+            color: var(--vscode-inputValidation-errorForeground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+            padding: 8px 12px;
+            margin: 8px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        /* 隱藏/顯示程式碼預覽 */
+        .hide-preview .code-preview {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 工具列 -->
+        <div class="toolbar">
+            <button id="runBtn" title="生成程式碼">▶️ 執行</button>
+            <button id="saveBtn" title="儲存為模板">💾 儲存</button>
+            <button id="loadBtn" title="載入模板">📁 載入</button>
+            <button id="clearBtn" title="清空工作區">🗑️ 清空</button>
+            <button id="togglePreviewBtn" title="切換程式碼預覽">👁️ 預覽</button>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <span>生成中...</span>
+            </div>
+        </div>
+
+        <!-- 錯誤訊息 -->
+        <div class="error-message" id="errorMessage"></div>
+
+        <!-- 主要內容區域 -->
+        <div class="main-content">
+            <!-- Blockly 工作區 -->
+            <div class="blockly-area">
+                <div id="blocklyDiv"></div>
+            </div>
+
+            <!-- 程式碼預覽 -->
+            <div class="code-preview">
+                <div class="code-preview-header">Arduino 程式碼預覽</div>
+                <div class="code-preview-content">
+                    <textarea id="codePreview" readonly placeholder="程式碼將在這裡顯示..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- 狀態列 -->
+        <div class="status-bar">
+            <div class="status-item">
+                <span>積木數量: </span>
+                <span id="blockCount">0</span>
+            </div>
+            <div class="status-item">
+                <span>程式碼行數: </span>
+                <span id="lineCount">0</span>
+            </div>
+            <div class="status-item">
+                <span id="syncStatus">就緒</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blockly 核心庫 -->
+    <script src="{{BLOCKLY_PATH}}/blockly_compressed.js"></script>
+    <script src="{{BLOCKLY_PATH}}/blocks_compressed.js"></script>
+    <script src="{{BLOCKLY_PATH}}/msg/zh-hant.js"></script>
+
+    <script>
+        // 全域變數
+        let workspace;
+        let vscode;
+
+        // VSCode API
+        if (typeof acquireVsCodeApi !== 'undefined') {
+            vscode = acquireVsCodeApi();
+        } else {
+            // 開發環境模擬
+            vscode = {
+                postMessage: (message) => console.log('VSCode Message:', message),
+                getState: () => null,
+                setState: (state) => console.log('VSCode State:', state)
+            };
+        }
+
+        // Arduino 積木定義
+        const ARDUINO_BLOCKS = {{ARDUINO_BLOCKS}};
+
+        // 工具箱配置
+        const TOOLBOX = {{TOOLBOX}};
+
+        // 初始化 Blockly
+        function initBlockly() {
+            try {
+                // 註冊 Arduino 積木
+                registerArduinoBlocks();
+
+                // 創建工作區
+                workspace = Blockly.inject('blocklyDiv', {
+                    toolbox: TOOLBOX,
+                    grid: {
+                        spacing: 20,
+                        length: 3,
+                        colour: '#ccc',
+                        snap: true
+                    },
+                    zoom: {
+                        controls: true,
+                        wheel: true,
+                        startScale: 1.0,
+                        maxScale: 3,
+                        minScale: 0.3,
+                        scaleSpeed: 1.2
+                    },
+                    trashcan: true,
+                    theme: Blockly.Themes.Classic
+                });
+
+                // 監聽工作區變更
+                workspace.addChangeListener(onWorkspaceChange);
+
+                // 初始化程式碼生成
+                generateCode();
+
+                console.log('Blockly 初始化成功');
+            } catch (error) {
+                showError('Blockly 初始化失敗: ' + error.message);
+                console.error('Blockly 初始化錯誤:', error);
+            }
+        }
+
+        // 註冊 Arduino 積木
+        function registerArduinoBlocks() {
+            ARDUINO_BLOCKS.forEach(block => {
+                Blockly.Blocks[block.type] = {
+                    init: function() {
+                        this.jsonInit(block);
+                    }
+                };
+            });
+        }
+
+        // 工作區變更事件
+        function onWorkspaceChange(event) {
+            // 更新積木數量
+            updateBlockCount();
+
+            // 延遲生成程式碼以提高效能
+            if (this.codeGenerationTimer) {
+                clearTimeout(this.codeGenerationTimer);
+            }
+            this.codeGenerationTimer = setTimeout(generateCode, 300);
+
+            // 通知 VSCode 工作區已變更
+            vscode.postMessage({
+                command: 'workspaceChanged',
+                data: Blockly.Xml.workspaceToDom(workspace)
+            });
+        }
+
+        // 生成程式碼
+        function generateCode() {
+            try {
+                const code = generateArduinoCode();
+                document.getElementById('codePreview').value = code;
+                updateLineCount(code);
+
+                // 通知 VSCode 程式碼已生成
+                vscode.postMessage({
+                    command: 'codeGenerated',
+                    data: { code }
+                });
+
+                hideError();
+            } catch (error) {
+                showError('程式碼生成失敗: ' + error.message);
+                console.error('程式碼生成錯誤:', error);
+            }
+        }
+
+        // 生成 Arduino 程式碼
+        function generateArduinoCode() {
+            // 這裡將整合之前創建的 ArduinoCodeGenerator
+            // 暫時返回簡單的範例程式碼
+            const setupBlocks = workspace.getBlocksByType('arduino_setup');
+            const loopBlocks = workspace.getBlocksByType('arduino_loop');
+
+            let setupCode = '  // 初始化程式碼';
+            let loopCode = '  // 主要程式邏輯';
+
+            if (setupBlocks.length > 0) {
+                setupCode = generateBlockCode(setupBlocks[0].getInputTargetBlock('SETUP_CODE'));
+            }
+
+            if (loopBlocks.length > 0) {
+                loopCode = generateBlockCode(loopBlocks[0].getInputTargetBlock('LOOP_CODE'));
+            }
+
+            return `// Arduino 程式碼
+// 由 TextBlockly 自動生成
+
+void setup() {
+${setupCode}
+}
+
+void loop() {
+${loopCode}
+}`;
+        }
+
+        // 生成積木程式碼
+        function generateBlockCode(block, indent = '  ') {
+            if (!block) return '  // 請拖曳積木到這裡';
+
+            let code = '';
+            let currentBlock = block;
+
+            while (currentBlock) {
+                const blockCode = generateSingleBlockCode(currentBlock, indent);
+                if (blockCode) {
+                    code += blockCode + '\\n';
+                }
+                currentBlock = currentBlock.getNextBlock();
+            }
+
+            return code.trim() || '  // 請拖曳積木到這裡';
+        }
+
+        // 生成單一積木程式碼
+        function generateSingleBlockCode(block, indent) {
+            const blockType = block.type;
+
+            switch (blockType) {
+                case 'arduino_digitalwrite':
+                    const pin = block.getFieldValue('PIN');
+                    const state = block.getFieldValue('STATE');
+                    return `${indent}digitalWrite(${pin}, ${state});`;
+
+                case 'arduino_digitalread':
+                    const readPin = block.getFieldValue('PIN');
+                    return `digitalRead(${readPin})`;
+
+                case 'arduino_pinmode':
+                    const modePin = block.getFieldValue('PIN');
+                    const mode = block.getFieldValue('MODE');
+                    return `${indent}pinMode(${modePin}, ${mode});`;
+
+                case 'arduino_analogread':
+                    const analogPin = block.getFieldValue('PIN');
+                    return `analogRead(${analogPin})`;
+
+                case 'arduino_analogwrite':
+                    const pwmPin = block.getFieldValue('PIN');
+                    const pwmValue = block.getFieldValue('VALUE');
+                    return `${indent}analogWrite(${pwmPin}, ${pwmValue});`;
+
+                case 'arduino_delay':
+                    const delayTime = block.getFieldValue('TIME');
+                    return `${indent}delay(${delayTime});`;
+
+                case 'arduino_delayMicroseconds':
+                    const microTime = block.getFieldValue('TIME');
+                    return `${indent}delayMicroseconds(${microTime});`;
+
+                default:
+                    return `${indent}// ${blockType} 積木`;
+            }
+        }
+
+        // 更新積木數量
+        function updateBlockCount() {
+            const count = workspace.getAllBlocks().length;
+            document.getElementById('blockCount').textContent = count;
+        }
+
+        // 更新程式碼行數
+        function updateLineCount(code) {
+            const lines = code.split('\\n').length;
+            document.getElementById('lineCount').textContent = lines;
+        }
+
+        // 顯示錯誤訊息
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+
+        // 隱藏錯誤訊息
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        // 工具列按鈕事件
+        document.getElementById('runBtn').addEventListener('click', () => {
+            generateCode();
+            vscode.postMessage({ command: 'runCode' });
+        });
+
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            const xml = Blockly.Xml.workspaceToDom(workspace);
+            vscode.postMessage({
+                command: 'saveTemplate',
+                data: { xml: Blockly.Xml.domToText(xml) }
+            });
+        });
+
+        document.getElementById('loadBtn').addEventListener('click', () => {
+            vscode.postMessage({ command: 'loadTemplate' });
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            if (confirm('確定要清空工作區嗎？')) {
+                workspace.clear();
+            }
+        });
+
+        document.getElementById('togglePreviewBtn').addEventListener('click', () => {
+            document.body.classList.toggle('hide-preview');
+        });
+
+        // VSCode 訊息處理
+        window.addEventListener('message', event => {
+            const message = event.data;
+            switch (message.command) {
+                case 'loadWorkspace':
+                    if (message.data && message.data.xml) {
+                        const xml = Blockly.Xml.textToDom(message.data.xml);
+                        Blockly.Xml.domToWorkspace(xml, workspace);
+                    }
+                    break;
+                case 'syncCode':
+                    generateCode();
+                    break;
+            }
+        });
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', initBlockly);
+    </script>
+</body>
+</html>

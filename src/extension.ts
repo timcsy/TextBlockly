@@ -3,14 +3,20 @@ import { BlocklyViewProvider } from './webview/BlocklyViewProvider';
 import { TemplateManager } from './template/TemplateManager';
 import { CodeSyncManager } from './sync/CodeSyncManager';
 
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
+export async function activate(
+  context: vscode.ExtensionContext
+): Promise<void> {
   // 顯示啟用消息
   vscode.window.showInformationMessage('TextBlockly extension is now active!');
 
   // 初始化核心管理器
   const templateManager = new TemplateManager(context);
   const codeSyncManager = new CodeSyncManager();
-  const blocklyViewProvider = new BlocklyViewProvider(context, templateManager, codeSyncManager);
+  const blocklyViewProvider = new BlocklyViewProvider(
+    context,
+    templateManager,
+    codeSyncManager
+  );
 
   // 註冊命令
   const commands = [
@@ -35,7 +41,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(...commands);
 
   // 監聽文檔變更事件（用於自動同步）
-  const onDocumentChange = vscode.workspace.onDidChangeTextDocument(event => {
+  const onDocumentChange = vscode.workspace.onDidChangeTextDocument((event) => {
     if (event.document.languageId === 'arduino') {
       codeSyncManager.onDocumentChange(event);
     }
