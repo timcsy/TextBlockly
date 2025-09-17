@@ -20,8 +20,8 @@ export async function activate(
 
   // 註冊命令
   const commands = [
-    vscode.commands.registerCommand('textblockly.openBlocklyView', () => {
-      return blocklyViewProvider.createOrShow();
+    vscode.commands.registerCommand('textblockly.openBlocklyView', async () => {
+      return await blocklyViewProvider.createOrShow();
     }),
 
     vscode.commands.registerCommand('textblockly.syncCodeToBlocks', () => {

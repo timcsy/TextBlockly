@@ -111,51 +111,6 @@
             border-radius: 4px;
             display: none;
         }
-
-        /* 修正 Blockly 工具箱標題顏色 */
-        .blocklyTreeLabel,
-        .goog-tree-item-label {
-            color: var(--vscode-sideBarTitle-foreground, var(--vscode-foreground)) !important;
-            font-weight: 600;
-            text-shadow: 0 0 1px rgba(0, 0, 0, 0.5);
-        }
-
-        /* 修正工具箱背景和邊框 */
-        .blocklyToolboxDiv {
-            background-color: var(--vscode-sideBar-background) !important;
-            border-right: 1px solid var(--vscode-sideBar-border) !important;
-        }
-
-        /* 為工具箱項目添加更好的對比度 */
-        .blocklyTreeRow {
-            background-color: rgba(255, 255, 255, 0.05) !important;
-            margin: 2px 4px;
-            border-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        /* 修正飛出選單背景 */
-        .blocklyFlyout {
-            background-color: var(--vscode-sideBar-background) !important;
-        }
-
-        /* 修正分類選中狀態 */
-        .blocklyTreeRow.blocklyTreeRowSelected {
-            background-color: var(--vscode-list-activeSelectionBackground) !important;
-        }
-
-        .blocklyTreeRow.blocklyTreeRowSelected .blocklyTreeLabel {
-            color: var(--vscode-list-activeSelectionForeground) !important;
-        }
-
-        /* 修正分類懸停狀態 */
-        .blocklyTreeRow:hover {
-            background-color: var(--vscode-list-hoverBackground) !important;
-        }
-
-        .blocklyTreeRow:hover .blocklyTreeLabel {
-            color: var(--vscode-list-hoverForeground) !important;
-        }
     </style>
 </head>
 <body>
@@ -399,383 +354,6 @@
                 };
             });
 
-            // 註冊標準 Blockly 邏輯積木
-            if (!Blockly.Blocks['logic_compare']) {
-                Blockly.Blocks['logic_compare'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'logic_compare',
-                            message0: '%1 %2 %3',
-                            args0: [
-                                { type: 'input_value', name: 'A', check: null },
-                                {
-                                    type: 'field_dropdown',
-                                    name: 'OP',
-                                    options: [
-                                        ['=', 'EQ'],
-                                        ['≠', 'NEQ'],
-                                        ['<', 'LT'],
-                                        ['≤', 'LTE'],
-                                        ['>', 'GT'],
-                                        ['≥', 'GTE']
-                                    ]
-                                },
-                                { type: 'input_value', name: 'B', check: null }
-                            ],
-                            inputsInline: true,
-                            output: 'Boolean',
-                            colour: 210,
-                            tooltip: '比較兩個值',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
-            if (!Blockly.Blocks['logic_operation']) {
-                Blockly.Blocks['logic_operation'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'logic_operation',
-                            message0: '%1 %2 %3',
-                            args0: [
-                                { type: 'input_value', name: 'A', check: 'Boolean' },
-                                {
-                                    type: 'field_dropdown',
-                                    name: 'OP',
-                                    options: [
-                                        ['且', 'AND'],
-                                        ['或', 'OR']
-                                    ]
-                                },
-                                { type: 'input_value', name: 'B', check: 'Boolean' }
-                            ],
-                            inputsInline: true,
-                            output: 'Boolean',
-                            colour: 210,
-                            tooltip: '邏輯運算',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
-            if (!Blockly.Blocks['logic_negate']) {
-                Blockly.Blocks['logic_negate'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'logic_negate',
-                            message0: '不是 %1',
-                            args0: [
-                                { type: 'input_value', name: 'BOOL', check: 'Boolean' }
-                            ],
-                            output: 'Boolean',
-                            colour: 210,
-                            tooltip: '邏輯否定',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
-            if (!Blockly.Blocks['logic_boolean']) {
-                Blockly.Blocks['logic_boolean'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'logic_boolean',
-                            message0: '%1',
-                            args0: [
-                                {
-                                    type: 'field_dropdown',
-                                    name: 'BOOL',
-                                    options: [
-                                        ['真', 'TRUE'],
-                                        ['假', 'FALSE']
-                                    ]
-                                }
-                            ],
-                            output: 'Boolean',
-                            colour: 210,
-                            tooltip: '布林值',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
-            // 註冊控制流積木
-            if (!Blockly.Blocks['controls_if']) {
-                Blockly.Blocks['controls_if'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'controls_if',
-                            message0: '如果 %1',
-                            message1: '執行 %1',
-                            args0: [
-                                { type: 'input_value', name: 'IF0', check: 'Boolean' }
-                            ],
-                            args1: [
-                                { type: 'input_statement', name: 'DO0' }
-                            ],
-                            previousStatement: null,
-                            nextStatement: null,
-                            colour: 210,
-                            tooltip: '如果條件為真，執行語句',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
-            if (!Blockly.Blocks['controls_repeat_ext']) {
-                Blockly.Blocks['controls_repeat_ext'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'controls_repeat_ext',
-                            message0: '重複 %1 次',
-                            message1: '執行 %1',
-                            args0: [
-                                { type: 'input_value', name: 'TIMES', check: 'Number' }
-                            ],
-                            args1: [
-                                { type: 'input_statement', name: 'DO' }
-                            ],
-                            previousStatement: null,
-                            nextStatement: null,
-                            colour: 120,
-                            tooltip: '重複執行指定次數',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
-            if (!Blockly.Blocks['controls_whileUntil']) {
-                Blockly.Blocks['controls_whileUntil'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'controls_whileUntil',
-                            message0: '%1 %2',
-                            message1: '執行 %1',
-                            args0: [
-                                {
-                                    type: 'field_dropdown',
-                                    name: 'MODE',
-                                    options: [
-                                        ['當', 'WHILE'],
-                                        ['直到', 'UNTIL']
-                                    ]
-                                },
-                                { type: 'input_value', name: 'BOOL', check: 'Boolean' }
-                            ],
-                            args1: [
-                                { type: 'input_statement', name: 'DO' }
-                            ],
-                            previousStatement: null,
-                            nextStatement: null,
-                            colour: 120,
-                            tooltip: '條件迴圈',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
-            if (!Blockly.Blocks['controls_for']) {
-                Blockly.Blocks['controls_for'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'controls_for',
-                            message0: '計數 %1 從 %2 到 %3 每次增加 %4',
-                            message1: '執行 %1',
-                            args0: [
-                                { type: 'field_variable', name: 'VAR', variable: 'i' },
-                                { type: 'input_value', name: 'FROM', check: 'Number' },
-                                { type: 'input_value', name: 'TO', check: 'Number' },
-                                { type: 'input_value', name: 'BY', check: 'Number' }
-                            ],
-                            args1: [
-                                { type: 'input_statement', name: 'DO' }
-                            ],
-                            inputsInline: true,
-                            previousStatement: null,
-                            nextStatement: null,
-                            colour: 120,
-                            tooltip: 'for 迴圈',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
-            // 註冊數學積木
-            if (!Blockly.Blocks['math_number']) {
-                Blockly.Blocks['math_number'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'math_number',
-                            message0: '%1',
-                            args0: [
-                                { type: 'field_number', name: 'NUM', value: 0 }
-                            ],
-                            output: 'Number',
-                            colour: 230,
-                            tooltip: '數字',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
-            if (!Blockly.Blocks['math_arithmetic']) {
-                Blockly.Blocks['math_arithmetic'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'math_arithmetic',
-                            message0: '%1 %2 %3',
-                            args0: [
-                                { type: 'input_value', name: 'A', check: 'Number' },
-                                {
-                                    type: 'field_dropdown',
-                                    name: 'OP',
-                                    options: [
-                                        ['+', 'ADD'],
-                                        ['-', 'MINUS'],
-                                        ['×', 'MULTIPLY'],
-                                        ['÷', 'DIVIDE'],
-                                        ['^', 'POWER']
-                                    ]
-                                },
-                                { type: 'input_value', name: 'B', check: 'Number' }
-                            ],
-                            inputsInline: true,
-                            output: 'Number',
-                            colour: 230,
-                            tooltip: '數學運算',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
-            // 註冊基本文字積木
-            if (!Blockly.Blocks['text']) {
-                Blockly.Blocks['text'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'text',
-                            message0: '%1',
-                            args0: [
-                                { type: 'field_input', name: 'TEXT', text: '' }
-                            ],
-                            output: 'String',
-                            colour: 160,
-                            tooltip: '文字',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
-            // 註冊 Arduino 腳位積木（這會被 ARDUINO_BLOCKS 自動註冊，但確保存在）
-            if (!Blockly.Blocks['arduino_pin']) {
-                Blockly.Blocks['arduino_pin'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'arduino_pin',
-                            message0: '%1',
-                            args0: [
-                                {
-                                    type: 'field_input',
-                                    name: 'PIN',
-                                    text: 'A0'
-                                }
-                            ],
-                            output: 'String',
-                            colour: 160,
-                            tooltip: 'Arduino 腳位（數位或類比）',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
-            // 註冊萬用程式碼積木
-            if (!Blockly.Blocks['arduino_raw_statement']) {
-                Blockly.Blocks['arduino_raw_statement'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'arduino_raw_statement',
-                            message0: '%1',
-                            args0: [
-                                {
-                                    type: 'field_input',
-                                    name: 'CODE',
-                                    text: '',
-                                    spellcheck: false
-                                }
-                            ],
-                            previousStatement: null,
-                            nextStatement: null,
-                            colour: 30,
-                            tooltip: '萬用敘述積木：直接輸入任何 Arduino 敘述程式碼',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
-            if (!Blockly.Blocks['arduino_raw_expression']) {
-                Blockly.Blocks['arduino_raw_expression'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'arduino_raw_expression',
-                            message0: '%1',
-                            args0: [
-                                {
-                                    type: 'field_input',
-                                    name: 'CODE',
-                                    text: '',
-                                    spellcheck: false
-                                }
-                            ],
-                            output: null,
-                            colour: 30,
-                            tooltip: '萬用表達式積木：直接輸入任何 Arduino 表達式程式碼',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
-            if (!Blockly.Blocks['arduino_raw_block']) {
-                Blockly.Blocks['arduino_raw_block'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'arduino_raw_block',
-                            message0: '%1 %2',
-                            args0: [
-                                {
-                                    type: 'field_input',
-                                    name: 'CODE',
-                                    text: '',
-                                    spellcheck: false
-                                },
-                                {
-                                    type: 'input_statement',
-                                    name: 'STATEMENTS'
-                                }
-                            ],
-                            previousStatement: null,
-                            nextStatement: null,
-                            colour: 30,
-                            tooltip: '萬用區塊積木：直接輸入控制結構（如 if、for 等）',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
             // 確保變數積木正確註冊到 Blockly 的變數系統
             // 這是讓變數工具箱正常工作的關鍵
             if (!Blockly.Blocks['variables_get']) {
@@ -824,81 +402,46 @@
                     }
                 };
             }
-
-            // 註冊變數宣告和定義積木
-            if (!Blockly.Blocks['variables_declare']) {
-                Blockly.Blocks['variables_declare'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'variables_declare',
-                            message0: '宣告 %1 變數 %2',
-                            args0: [
-                                {
-                                    type: 'field_dropdown',
-                                    name: 'TYPE',
-                                    options: [
-                                        ['int', 'int'],
-                                        ['float', 'float'],
-                                        ['boolean', 'boolean'],
-                                        ['char', 'char'],
-                                        ['String', 'String']
-                                    ]
-                                },
-                                {
-                                    type: 'field_variable',
-                                    name: 'VAR',
-                                    variable: 'myVar'
-                                }
-                            ],
-                            inputsInline: true,
-                            previousStatement: null,
-                            nextStatement: null,
-                            colour: 330,
-                            tooltip: '宣告指定類型的變數',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
-
-            if (!Blockly.Blocks['variables_define']) {
-                Blockly.Blocks['variables_define'] = {
-                    init: function() {
-                        this.jsonInit({
-                            type: 'variables_define',
-                            message0: '定義 %1 變數 %2 = %3',
-                            args0: [
-                                {
-                                    type: 'field_dropdown',
-                                    name: 'TYPE',
-                                    options: [
-                                        ['int', 'int'],
-                                        ['float', 'float'],
-                                        ['boolean', 'boolean'],
-                                        ['char', 'char'],
-                                        ['String', 'String']
-                                    ]
-                                },
-                                {
-                                    type: 'field_variable',
-                                    name: 'VAR',
-                                    variable: 'myVar'
-                                },
-                                {
-                                    type: 'input_value',
-                                    name: 'VALUE'
-                                }
-                            ],
-                            inputsInline: true,
-                            colour: 310,
-                            tooltip: '定義指定類型的全域變數（在程式碼頂部）',
-                            helpUrl: ''
-                        });
-                    }
-                };
-            }
         }
 
+        // 簡單的測試對話框
+        function showSimpleTestDialog() {
+            console.log('🧪 Creating simple test dialog');
+
+            // 創建一個非常簡單的對話框
+            const testOverlay = document.createElement('div');
+            testOverlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: red;
+                z-index: 999999;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            `;
+
+            const testBox = document.createElement('div');
+            testBox.style.cssText = `
+                background: yellow;
+                padding: 50px;
+                border: 5px solid black;
+                font-size: 24px;
+                color: black;
+            `;
+            testBox.textContent = 'TEST DIALOG - CLICK TO CLOSE';
+
+            testBox.addEventListener('click', () => {
+                document.body.removeChild(testOverlay);
+                console.log('🧪 Simple test dialog closed');
+            });
+
+            testOverlay.appendChild(testBox);
+            document.body.appendChild(testOverlay);
+            console.log('🧪 Simple test dialog added to DOM');
+        }
 
         // 顯示變數名稱輸入對話框（異步版本）
         function showVariableNameDialogAsync(message, suggestedName, callback) {
@@ -1042,6 +585,202 @@
             });
         }
 
+
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                background: #2d2d30;
+                border: 2px solid #007acc;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+                min-width: 320px;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            `;
+
+            const title = document.createElement('h3');
+            title.textContent = '建立新變數';
+            title.style.cssText = 'margin: 0 0 15px 0; color: #ffffff; font-size: 18px;';
+
+            const description = document.createElement('p');
+            description.textContent = '請輸入變數名稱：';
+            description.style.cssText = 'margin: 0 0 10px 0; color: #cccccc; font-size: 14px;';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = suggestedName;
+            input.placeholder = '變數名稱...';
+            input.style.cssText = `
+                width: 100%;
+                padding: 10px;
+                border: 2px solid #007acc;
+                border-radius: 4px;
+                font-size: 14px;
+                margin-bottom: 20px;
+                box-sizing: border-box;
+                outline: none;
+                background: #1e1e1e;
+                color: #ffffff;
+            `;
+
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.cssText = 'display: flex; gap: 10px; justify-content: flex-end;';
+
+            const cancelButton = document.createElement('button');
+            cancelButton.textContent = '取消';
+            cancelButton.style.cssText = `
+                padding: 10px 20px;
+                border: 2px solid #666;
+                background: #3c3c3c;
+                color: #ffffff;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+            `;
+
+            const confirmButton = document.createElement('button');
+            confirmButton.textContent = '建立';
+            confirmButton.style.cssText = `
+                padding: 10px 20px;
+                border: 2px solid #007acc;
+                background: #007acc;
+                color: #ffffff;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+            `;
+
+            // 變數來儲存結果
+            let result = null;
+            let dialogClosed = false;
+
+            // 事件處理
+            function closeDialog(returnValue) {
+                if (dialogClosed) {
+                    console.log('⚠️ Dialog already closed, ignoring');
+                    return;
+                }
+                console.log('🚪 Closing dialog with result:', returnValue);
+                dialogClosed = true;
+                result = returnValue;
+                try {
+                    if (document.body.contains(overlay)) {
+                        document.body.removeChild(overlay);
+                        console.log('🗑️ Dialog removed from DOM');
+                    }
+                } catch (e) {
+                    console.warn('Error removing dialog from DOM:', e);
+                }
+            }
+
+            cancelButton.addEventListener('click', () => {
+                closeDialog(null);
+            });
+
+            confirmButton.addEventListener('click', () => {
+                const variableName = input.value.trim();
+                closeDialog(variableName || null);
+            });
+
+            // 鍵盤事件
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    confirmButton.click();
+                } else if (e.key === 'Escape') {
+                    cancelButton.click();
+                }
+            });
+
+            input.addEventListener('focus', () => {
+                input.style.borderColor = '#00d4ff';
+            });
+
+            input.addEventListener('blur', () => {
+                input.style.borderColor = '#007acc';
+            });
+
+            // 按鈕懸停效果
+            cancelButton.addEventListener('mouseover', () => {
+                cancelButton.style.background = '#484848';
+            });
+            cancelButton.addEventListener('mouseout', () => {
+                cancelButton.style.background = '#3c3c3c';
+            });
+
+            confirmButton.addEventListener('mouseover', () => {
+                confirmButton.style.background = '#005a9e';
+            });
+            confirmButton.addEventListener('mouseout', () => {
+                confirmButton.style.background = '#007acc';
+            });
+
+            // 組裝對話框
+            buttonContainer.appendChild(cancelButton);
+            buttonContainer.appendChild(confirmButton);
+
+            dialog.appendChild(title);
+            dialog.appendChild(description);
+            dialog.appendChild(input);
+            dialog.appendChild(buttonContainer);
+
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+            console.log('📱 Dialog added to DOM');
+
+            // 聚焦輸入框並選中文字
+            setTimeout(() => {
+                input.focus();
+                input.select();
+                console.log('🎯 Input focused and selected');
+            }, 50);
+
+            // 點擊覆蓋層關閉
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    closeDialog(null);
+                }
+            });
+
+            // 使用更安全的同步等待方法
+            console.log('🔄 Showing dialog and waiting for result...');
+
+            // 使用更短的檢查間隔，避免凍結
+            const start = Date.now();
+            const timeout = 30000; // 30秒超時
+
+            // 讓瀏覽器有時間渲染對話框
+            const now = performance.now();
+            while (performance.now() - now < 100) {
+                // 允許瀏覽器處理 DOM 更新
+            }
+
+            // 使用更溫和的等待循環
+            while (!dialogClosed && (Date.now() - start) < timeout) {
+                // 更短的忙等待間隔
+                const checkStart = performance.now();
+                while (performance.now() - checkStart < 5) {
+                    // 只等待 5ms
+                }
+            }
+
+            // 超時或完成處理
+            if (!dialogClosed) {
+                console.warn('⏰ Dialog timeout after', Date.now() - start, 'ms, using suggested name');
+                try {
+                    if (document.body.contains(overlay)) {
+                        document.body.removeChild(overlay);
+                        console.log('🗑️ Removed timeout dialog from DOM');
+                    }
+                } catch (e) {
+                    console.warn('Error removing dialog:', e);
+                }
+                result = suggestedName;
+                dialogClosed = true;
+            }
+
+            console.log('✅ Dialog completed, result:', result, 'took:', Date.now() - start, 'ms');
+            return result || suggestedName;
+        }
+
         // 工作區變更事件（手動同步模式 - 僅更新計數）
         function onWorkspaceChange(event) {
             console.log('Workspace change event:', event.type);
@@ -1079,14 +818,6 @@
             const setupBlocks = workspace.getBlocksByType('arduino_setup');
             const loopBlocks = workspace.getBlocksByType('arduino_loop');
 
-            // 收集全域變數定義
-            const globalVarBlocks = workspace.getBlocksByType('variables_define');
-
-            let globalVarCode = '';
-            if (globalVarBlocks.length > 0) {
-                globalVarCode = globalVarBlocks.map(block => generateSingleBlockCode(block, '')).join('\n') + '\n';
-            }
-
             let setupCode = '  // 初始化程式碼';
             let loopCode = '  // 主要程式邏輯';
 
@@ -1116,7 +847,7 @@
 // 由 TextBlockly 自動生成
 // 生成時間: ${timestamp}
 
-${globalVarCode}void setup() {
+void setup() {
 ${formattedSetupCode}
 }
 
@@ -1171,48 +902,29 @@ ${formattedLoopCode}
             switch (blockType) {
                 // Arduino 特定積木
                 case 'arduino_digitalwrite':
-                    const pin = generateValueCode(block.getInputTargetBlock('PIN')) || '13';
+                    const pin = validateNumber(block.getFieldValue('PIN'), '13', 0, 53);
                     const state = block.getFieldValue('STATE') || 'HIGH';
                     return `${indent}digitalWrite(${pin}, ${state});`;
 
                 case 'arduino_digitalread':
-                    const readPin = generateValueCode(block.getInputTargetBlock('PIN')) || '2';
+                    const readPin = validateNumber(block.getFieldValue('PIN'), '2', 0, 53);
                     return `digitalRead(${readPin})`;
 
                 case 'arduino_pinmode':
-                    const modePin = generateValueCode(block.getInputTargetBlock('PIN')) || '13';
+                    const modePin = validateNumber(block.getFieldValue('PIN'), '13', 0, 53);
                     const mode = block.getFieldValue('MODE') || 'OUTPUT';
                     return `${indent}pinMode(${modePin}, ${mode});`;
 
                 case 'arduino_analogread':
-                    const analogPin = generateValueCode(block.getInputTargetBlock('PIN')) || 'A0';
-                    return `analogRead(${analogPin})`;
+                    const analogPin = block.getFieldValue('PIN') || 'A0';
+                    // 驗證類比腳位格式
+                    const validAnalogPin = /^A[0-5]$/.test(analogPin) ? analogPin : 'A0';
+                    return `analogRead(${validAnalogPin})`;
 
                 case 'arduino_analogwrite':
-                    const pwmPin = generateValueCode(block.getInputTargetBlock('PIN')) || '9';
-                    const pwmValue = generateValueCode(block.getInputTargetBlock('VALUE')) || '128';
+                    const pwmPin = validateNumber(block.getFieldValue('PIN'), '9', 0, 53);
+                    const pwmValue = validateNumber(block.getFieldValue('VALUE'), '128', 0, 255);
                     return `${indent}analogWrite(${pwmPin}, ${pwmValue});`;
-
-                case 'arduino_pin':
-                    return block.getFieldValue('PIN') || 'A0';
-
-                case 'arduino_raw_statement':
-                    const rawStatement = block.getFieldValue('CODE') || '';
-                    // 檢查是否已經有分號結尾，避免重複添加
-                    const trimmedStatement = rawStatement.trim();
-                    if (trimmedStatement.endsWith(';') || trimmedStatement.endsWith('}') || trimmedStatement === '') {
-                        return `${indent}${rawStatement}`;
-                    }
-                    return `${indent}${rawStatement};`;
-
-                case 'arduino_raw_expression':
-                    const rawExpression = block.getFieldValue('CODE') || '';
-                    return rawExpression;
-
-                case 'arduino_raw_block':
-                    const rawBlockCode = block.getFieldValue('CODE') || '';
-                    const statements = generateStatements(block, 'STATEMENTS', indent + '  ');
-                    return `${indent}${rawBlockCode} {\n${statements}${indent}}`;
 
                 case 'arduino_delay':
                     const delayTime = validateNumber(block.getFieldValue('TIME'), '1000', 0);
@@ -1248,23 +960,12 @@ ${formattedLoopCode}
                 case 'logic_boolean':
                     return generateLogicBoolean(block);
 
-                // 數學和基本積木
+                // 數學積木
                 case 'math_number':
                     return validateNumber(block.getFieldValue('NUM'), '0');
 
                 case 'math_arithmetic':
                     return generateMathArithmetic(block);
-
-                case 'text':
-                    const textValue = block.getFieldValue('TEXT') || '';
-                    // 檢查是否為 Arduino 常數（如 A0-A5, HIGH, LOW）
-                    if (/^A[0-5]$/.test(textValue) || /^(HIGH|LOW|INPUT|OUTPUT|INPUT_PULLUP)$/.test(textValue)) {
-                        return textValue;
-                    }
-                    return `"${textValue}"`;
-
-                case 'number':
-                    return validateNumber(block.getFieldValue('NUM'), '0');
 
                 // 變數積木
                 case 'variables_get':
@@ -1272,12 +973,6 @@ ${formattedLoopCode}
 
                 case 'variables_set':
                     return generateVariablesSet(block, indent);
-
-                case 'variables_declare':
-                    return generateVariablesDeclare(block, indent);
-
-                case 'variables_define':
-                    return generateVariablesDefine(block, indent);
 
                 default:
                     console.warn(`Unknown block type: ${blockType}`);
@@ -1291,18 +986,9 @@ ${formattedLoopCode}
             const doCode = generateBlockCode(block.getInputTargetBlock('DO0'), indent + '  ');
             const elseCode = generateBlockCode(block.getInputTargetBlock('ELSE'), indent + '  ');
 
-            // 確保 doCode 每一行都有正確的縮排
-            const formattedDoCode = doCode.split('\n')
-                .map(line => line.trim() ? (line.startsWith(indent + '  ') ? line : indent + '  ' + line.trim()) : line)
-                .join('\n');
-
-            let code = `${indent}if (${condition}) {\n${formattedDoCode}\n${indent}}`;
-
+            let code = `${indent}if (${condition}) {\n${doCode}\n${indent}}`;
             if (elseCode && elseCode.trim() !== '// 請拖曳積木到這裡') {
-                const formattedElseCode = elseCode.split('\n')
-                    .map(line => line.trim() ? (line.startsWith(indent + '  ') ? line : indent + '  ' + line.trim()) : line)
-                    .join('\n');
-                code += ` else {\n${formattedElseCode}\n${indent}}`;
+                code += ` else {\n${elseCode}\n${indent}}`;
             }
             return code;
         }
@@ -1311,11 +997,7 @@ ${formattedLoopCode}
             const times = validateNumber(generateValueCode(block.getInputTargetBlock('TIMES')), '10', 0);
             const doCode = generateBlockCode(block.getInputTargetBlock('DO'), indent + '  ');
 
-            const formattedDoCode = doCode.split('\n')
-                .map(line => line.trim() ? (line.startsWith(indent + '  ') ? line : indent + '  ' + line.trim()) : line)
-                .join('\n');
-
-            return `${indent}for (int i = 0; i < ${times}; i++) {\n${formattedDoCode}\n${indent}}`;
+            return `${indent}for (int i = 0; i < ${times}; i++) {\n${doCode}\n${indent}}`;
         }
 
         function generateControlsWhile(block, indent) {
@@ -1323,12 +1005,8 @@ ${formattedLoopCode}
             const condition = generateValueCode(block.getInputTargetBlock('BOOL')) || 'true';
             const doCode = generateBlockCode(block.getInputTargetBlock('DO'), indent + '  ');
 
-            const formattedDoCode = doCode.split('\n')
-                .map(line => line.trim() ? (line.startsWith(indent + '  ') ? line : indent + '  ' + line.trim()) : line)
-                .join('\n');
-
             const whileCondition = mode === 'WHILE' ? condition : `!(${condition})`;
-            return `${indent}while (${whileCondition}) {\n${formattedDoCode}\n${indent}}`;
+            return `${indent}while (${whileCondition}) {\n${doCode}\n${indent}}`;
         }
 
         function generateControlsFor(block, indent) {
@@ -1338,11 +1016,7 @@ ${formattedLoopCode}
             const by = validateNumber(generateValueCode(block.getInputTargetBlock('BY')), '1');
             const doCode = generateBlockCode(block.getInputTargetBlock('DO'), indent + '  ');
 
-            const formattedDoCode = doCode.split('\n')
-                .map(line => line.trim() ? (line.startsWith(indent + '  ') ? line : indent + '  ' + line.trim()) : line)
-                .join('\n');
-
-            return `${indent}for (int ${variable} = ${from}; ${variable} <= ${to}; ${variable} += ${by}) {\n${formattedDoCode}\n${indent}}`;
+            return `${indent}for (int ${variable} = ${from}; ${variable} <= ${to}; ${variable} += ${by}) {\n${doCode}\n${indent}}`;
         }
 
         // 邏輯積木生成函數
@@ -1398,39 +1072,6 @@ ${formattedLoopCode}
             const value = generateValueCode(block.getInputTargetBlock('VALUE')) || '0';
 
             return `${indent}${variable} = ${value};`;
-        }
-
-        function generateVariablesDeclare(block, indent) {
-            const type = block.getFieldValue('TYPE') || 'int';
-            const variable = validateVariableName(block.getFieldValue('VAR'), 'myVar');
-
-            return `${indent}${type} ${variable};`;
-        }
-
-        function generateVariablesDefine(block, indent) {
-            const type = block.getFieldValue('TYPE') || 'int';
-            const variable = validateVariableName(block.getFieldValue('VAR'), 'myVar');
-            const value = generateValueCode(block.getInputTargetBlock('VALUE')) || getDefaultValueForType(type);
-
-            return `${type} ${variable} = ${value};`;
-        }
-
-        // 根據類型取得預設值
-        function getDefaultValueForType(type) {
-            switch (type) {
-                case 'int':
-                    return '0';
-                case 'float':
-                    return '0.0';
-                case 'boolean':
-                    return 'false';
-                case 'char':
-                    return "'a'";
-                case 'String':
-                    return '""';
-                default:
-                    return '0';
-            }
         }
 
         // 輔助函數：生成值表達式的程式碼

@@ -12,6 +12,7 @@ export interface BlockDefinition {
   colour: number;
   tooltip: string;
   helpUrl: string;
+  inputsInline?: boolean;
 }
 
 /**
@@ -27,6 +28,7 @@ export class ArduinoBlocks {
       ...this.getAnalogIOBlocks(),
       ...this.getControlFlowBlocks(),
       ...this.getStructureBlocks(),
+      ...this.getVariableBlocks(),
     ];
   }
 
@@ -40,12 +42,15 @@ export class ArduinoBlocks {
         message0: 'digitalWrite 腳位 %1 輸出 %2',
         args0: [
           {
-            type: 'field_number',
+            type: 'input_value',
             name: 'PIN',
-            value: 13,
-            min: 0,
-            max: 53,
-            precision: 1,
+            check: 'Number',
+            shadow: {
+              type: 'math_number',
+              fields: {
+                NUM: 13
+              }
+            }
           },
           {
             type: 'field_dropdown',
@@ -56,10 +61,11 @@ export class ArduinoBlocks {
             ],
           },
         ],
+        inputsInline: true,
         previousStatement: null,
         nextStatement: null,
         colour: 230,
-        tooltip: '設定數位腳位的輸出狀態',
+        tooltip: '設定數位腳位的輸出狀態，支援變數輸入',
         helpUrl:
           'https://www.arduino.cc/reference/en/language/functions/digital-io/digitalwrite/',
       },
@@ -68,17 +74,20 @@ export class ArduinoBlocks {
         message0: 'digitalRead 腳位 %1',
         args0: [
           {
-            type: 'field_number',
+            type: 'input_value',
             name: 'PIN',
-            value: 2,
-            min: 0,
-            max: 53,
-            precision: 1,
+            check: 'Number',
+            shadow: {
+              type: 'math_number',
+              fields: {
+                NUM: 2
+              }
+            }
           },
         ],
         output: 'Boolean',
         colour: 230,
-        tooltip: '讀取數位腳位的狀態',
+        tooltip: '讀取數位腳位的狀態，支援變數輸入',
         helpUrl:
           'https://www.arduino.cc/reference/en/language/functions/digital-io/digitalread/',
       },
@@ -87,12 +96,15 @@ export class ArduinoBlocks {
         message0: 'pinMode 腳位 %1 模式 %2',
         args0: [
           {
-            type: 'field_number',
+            type: 'input_value',
             name: 'PIN',
-            value: 13,
-            min: 0,
-            max: 53,
-            precision: 1,
+            check: 'Number',
+            shadow: {
+              type: 'math_number',
+              fields: {
+                NUM: 13
+              }
+            }
           },
           {
             type: 'field_dropdown',
@@ -104,10 +116,11 @@ export class ArduinoBlocks {
             ],
           },
         ],
+        inputsInline: true,
         previousStatement: null,
         nextStatement: null,
         colour: 230,
-        tooltip: '設定腳位的輸入/輸出模式',
+        tooltip: '設定腳位的輸入/輸出模式，支援變數輸入',
         helpUrl:
           'https://www.arduino.cc/reference/en/language/functions/digital-io/pinmode/',
       },
@@ -124,21 +137,20 @@ export class ArduinoBlocks {
         message0: 'analogRead 腳位 %1',
         args0: [
           {
-            type: 'field_dropdown',
+            type: 'input_value',
             name: 'PIN',
-            options: [
-              ['A0', 'A0'],
-              ['A1', 'A1'],
-              ['A2', 'A2'],
-              ['A3', 'A3'],
-              ['A4', 'A4'],
-              ['A5', 'A5'],
-            ],
+            check: ['Number', 'String'],
+            shadow: {
+              type: 'text',
+              fields: {
+                TEXT: 'A0'
+              }
+            }
           },
         ],
         output: 'Number',
         colour: 160,
-        tooltip: '讀取類比腳位的值 (0-1023)',
+        tooltip: '讀取類比腳位的值 (0-1023)，支援A0-A5或變數',
         helpUrl:
           'https://www.arduino.cc/reference/en/language/functions/analog-io/analogread/',
       },
@@ -147,28 +159,104 @@ export class ArduinoBlocks {
         message0: 'analogWrite 腳位 %1 數值 %2',
         args0: [
           {
-            type: 'field_number',
+            type: 'input_value',
             name: 'PIN',
-            value: 9,
-            min: 0,
-            max: 53,
-            precision: 1,
+            check: 'Number',
+            shadow: {
+              type: 'math_number',
+              fields: {
+                NUM: 9
+              }
+            }
           },
           {
-            type: 'field_number',
+            type: 'input_value',
             name: 'VALUE',
-            value: 128,
-            min: 0,
-            max: 255,
-            precision: 1,
+            check: 'Number',
+            shadow: {
+              type: 'math_number',
+              fields: {
+                NUM: 128
+              }
+            }
+          },
+        ],
+        inputsInline: true,
+        previousStatement: null,
+        nextStatement: null,
+        colour: 160,
+        tooltip: '輸出 PWM 訊號到指定腳位 (0-255)，支援變數輸入',
+        helpUrl:
+          'https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/',
+      },
+      {
+        type: 'arduino_pin',
+        message0: '%1',
+        args0: [
+          {
+            type: 'field_input',
+            name: 'PIN',
+            text: 'A0',
+          },
+        ],
+        output: 'String',
+        colour: 160,
+        tooltip: 'Arduino 腳位（數位或類比）',
+        helpUrl: '',
+      },
+      {
+        type: 'arduino_raw_statement',
+        message0: '%1',
+        args0: [
+          {
+            type: 'field_input',
+            name: 'CODE',
+            text: '',
+            spellcheck: false,
           },
         ],
         previousStatement: null,
         nextStatement: null,
-        colour: 160,
-        tooltip: '輸出 PWM 訊號到指定腳位 (0-255)',
-        helpUrl:
-          'https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/',
+        colour: 30,
+        tooltip: '萬用敘述積木：直接輸入任何 Arduino 敘述程式碼',
+        helpUrl: '',
+      },
+      {
+        type: 'arduino_raw_expression',
+        message0: '%1',
+        args0: [
+          {
+            type: 'field_input',
+            name: 'CODE',
+            text: '',
+            spellcheck: false,
+          },
+        ],
+        output: null,
+        colour: 30,
+        tooltip: '萬用表達式積木：直接輸入任何 Arduino 表達式程式碼',
+        helpUrl: '',
+      },
+      {
+        type: 'arduino_raw_block',
+        message0: '%1 %2',
+        args0: [
+          {
+            type: 'field_input',
+            name: 'CODE',
+            text: '',
+            spellcheck: false,
+          },
+          {
+            type: 'input_statement',
+            name: 'STATEMENTS',
+          },
+        ],
+        previousStatement: null,
+        nextStatement: null,
+        colour: 30,
+        tooltip: '萬用區塊積木：直接輸入控制結構（如 if、for 等）',
+        helpUrl: '',
       },
     ];
   }
@@ -262,6 +350,107 @@ export class ArduinoBlocks {
   }
 
   /**
+   * 變數積木
+   */
+  static getVariableBlocks(): BlockDefinition[] {
+    return [
+      {
+        type: 'variables_get',
+        message0: '%1',
+        args0: [
+          {
+            type: 'field_variable',
+            name: 'VAR',
+            variable: 'item',
+          },
+        ],
+        output: null,
+        colour: 330,
+        tooltip: '取得變數的值',
+        helpUrl: '',
+      },
+      {
+        type: 'variables_set',
+        message0: '設定 %1 為 %2',
+        args0: [
+          {
+            type: 'field_variable',
+            name: 'VAR',
+            variable: 'item',
+          },
+          {
+            type: 'input_value',
+            name: 'VALUE',
+          },
+        ],
+        previousStatement: null,
+        nextStatement: null,
+        colour: 330,
+        tooltip: '設定變數的值',
+        helpUrl: '',
+      },
+      {
+        type: 'variables_declare',
+        message0: '宣告 %1 變數 %2',
+        args0: [
+          {
+            type: 'field_dropdown',
+            name: 'TYPE',
+            options: [
+              ['int', 'int'],
+              ['float', 'float'],
+              ['boolean', 'boolean'],
+              ['char', 'char'],
+              ['String', 'String'],
+            ],
+          },
+          {
+            type: 'field_variable',
+            name: 'VAR',
+            variable: 'myVar',
+          },
+        ],
+        inputsInline: true,
+        previousStatement: null,
+        nextStatement: null,
+        colour: 330,
+        tooltip: '宣告指定類型的變數',
+        helpUrl: '',
+      },
+      {
+        type: 'variables_define',
+        message0: '定義 %1 變數 %2 = %3',
+        args0: [
+          {
+            type: 'field_dropdown',
+            name: 'TYPE',
+            options: [
+              ['int', 'int'],
+              ['float', 'float'],
+              ['boolean', 'boolean'],
+              ['char', 'char'],
+              ['String', 'String'],
+            ],
+          },
+          {
+            type: 'field_variable',
+            name: 'VAR',
+            variable: 'myVar',
+          },
+          {
+            type: 'input_value',
+            name: 'VALUE',
+          },
+        ],
+        inputsInline: true,
+        colour: 310,
+        tooltip: '定義指定類型的全域變數（在程式碼頂部）',
+        helpUrl: '',
+      },
+    ];
+  }
+
+  /**
    * 積木分類定義
    */
   static getToolboxCategories() {
@@ -273,9 +462,42 @@ export class ArduinoBlocks {
           name: '數位 I/O',
           colour: '230',
           contents: [
-            { kind: 'block', type: 'arduino_digitalwrite' },
-            { kind: 'block', type: 'arduino_digitalread' },
-            { kind: 'block', type: 'arduino_pinmode' },
+            {
+              kind: 'block',
+              type: 'arduino_digitalwrite',
+              inputs: {
+                PIN: {
+                  shadow: {
+                    type: 'math_number',
+                    fields: { NUM: 13 }
+                  }
+                }
+              }
+            },
+            {
+              kind: 'block',
+              type: 'arduino_digitalread',
+              inputs: {
+                PIN: {
+                  shadow: {
+                    type: 'math_number',
+                    fields: { NUM: 2 }
+                  }
+                }
+              }
+            },
+            {
+              kind: 'block',
+              type: 'arduino_pinmode',
+              inputs: {
+                PIN: {
+                  shadow: {
+                    type: 'math_number',
+                    fields: { NUM: 13 }
+                  }
+                }
+              }
+            },
           ],
         },
         {
@@ -283,8 +505,36 @@ export class ArduinoBlocks {
           name: '類比 I/O',
           colour: '160',
           contents: [
-            { kind: 'block', type: 'arduino_analogread' },
-            { kind: 'block', type: 'arduino_analogwrite' },
+            {
+              kind: 'block',
+              type: 'arduino_analogread',
+              inputs: {
+                PIN: {
+                  shadow: {
+                    type: 'text',
+                    fields: { TEXT: 'A0' }
+                  }
+                }
+              }
+            },
+            {
+              kind: 'block',
+              type: 'arduino_analogwrite',
+              inputs: {
+                PIN: {
+                  shadow: {
+                    type: 'math_number',
+                    fields: { NUM: 9 }
+                  }
+                },
+                VALUE: {
+                  shadow: {
+                    type: 'math_number',
+                    fields: { NUM: 128 }
+                  }
+                }
+              }
+            },
           ],
         },
         {
@@ -347,9 +597,47 @@ export class ArduinoBlocks {
         },
         {
           kind: 'category',
+          name: '變數宣告',
+          colour: '310',
+          contents: [
+            { kind: 'block', type: 'variables_declare' },
+            { kind: 'block', type: 'variables_define' },
+          ],
+        },
+        {
+          kind: 'category',
           name: '函數',
           colour: '290',
           custom: 'PROCEDURE',
+        },
+        {
+          kind: 'category',
+          name: '工具',
+          colour: '30',
+          contents: [
+            {
+              kind: 'block',
+              type: 'arduino_raw_statement',
+              fields: {
+                CODE: 'pinMode(13, OUTPUT);'
+              }
+            },
+            {
+              kind: 'block',
+              type: 'arduino_raw_expression',
+              fields: {
+                CODE: 'digitalRead(2)'
+              }
+            },
+            {
+              kind: 'block',
+              type: 'arduino_raw_block',
+              fields: {
+                CODE: 'for (int i = 0; i < 10; i++)'
+              }
+            },
+            { kind: 'block', type: 'arduino_pin' },
+          ],
         },
       ],
     };

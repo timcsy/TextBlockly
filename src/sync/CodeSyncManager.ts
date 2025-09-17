@@ -35,6 +35,33 @@ export class CodeSyncManager {
       return;
     }
 
+    await this.updateActiveEditor(activeEditor, generatedCode);
+  }
+
+  /**
+   * 智能同步：只在有開啟的 Arduino 檔案時更新，否則靜默忽略
+   */
+  public async smartSyncBlocksToCode(generatedCode?: string): Promise<void> {
+    if (this.isUpdating) {
+      return;
+    }
+
+    const activeEditor = vscode.window.activeTextEditor;
+    if (!activeEditor || activeEditor.document.languageId !== 'arduino') {
+      // 沒有開啟的 Arduino 檔案時，靜默忽略
+      return;
+    }
+
+    await this.updateActiveEditor(activeEditor, generatedCode);
+  }
+
+  /**
+   * 更新活動編輯器的內容
+   */
+  private async updateActiveEditor(
+    activeEditor: vscode.TextEditor,
+    generatedCode?: string
+  ): Promise<void> {
     if (!generatedCode) {
       vscode.window.showWarningMessage('沒有程式碼可以同步');
       return;

@@ -5,10 +5,16 @@ import { TemplateManager } from '../template/TemplateManager';
 import { CodeSyncManager } from '../sync/CodeSyncManager';
 import { ArduinoBlocks } from '../blockly/ArduinoBlocks';
 import { ArduinoCodeGenerator } from '../arduino/CodeGenerator';
+import { ArduinoCodeParser } from '../arduino/CodeParser';
 
 export class BlocklyViewProvider {
   private panel: vscode.WebviewPanel | undefined;
   private codeGenerator: ArduinoCodeGenerator;
+  private codeParser: ArduinoCodeParser;
+  private currentArduinoDocument: vscode.TextDocument | undefined;
+  private documentChangeListener: vscode.Disposable | undefined;
+  private lastGeneratedCode: string = '';
+  private syncInProgress: boolean = false;
 
   constructor(
     private context: vscode.ExtensionContext,
@@ -16,40 +22,318 @@ export class BlocklyViewProvider {
     private codeSyncManager: CodeSyncManager
   ) {
     this.codeGenerator = new ArduinoCodeGenerator();
+    this.codeParser = new ArduinoCodeParser();
   }
 
-  public createOrShow(): void {
-    const columnToShowIn = vscode.ViewColumn.Two;
+  public async createOrShow(): Promise<void> {
+    console.log('BlocklyViewProvider: createOrShow called');
 
+    // 先處理 Blockly webview (左側)
     if (this.panel) {
-      this.panel.reveal(columnToShowIn);
-      return;
+      console.log('BlocklyViewProvider: Revealing existing panel');
+      this.panel.reveal(vscode.ViewColumn.One);
+    } else {
+      console.log('BlocklyViewProvider: Creating new panel');
+      this.panel = vscode.window.createWebviewPanel(
+        'textblockly',
+        'TextBlockly - Visual Programming',
+        vscode.ViewColumn.One,
+        {
+          enableScripts: true,
+          enableForms: true,
+          retainContextWhenHidden: true,
+          localResourceRoots: [
+            vscode.Uri.joinPath(
+              this.context.extensionUri,
+              'node_modules',
+              'blockly'
+            ),
+            vscode.Uri.joinPath(this.context.extensionUri, 'resources'),
+          ],
+        }
+      );
+
+      this.panel.webview.html = this.getWebviewContent();
+      this.setupMessageHandling();
+
+      this.panel.onDidDispose(() => {
+        this.panel = undefined;
+        this.currentArduinoDocument = undefined;
+        this.cleanup();
+      });
     }
 
-    this.panel = vscode.window.createWebviewPanel(
-      'textblockly',
-      'TextBlockly - Visual Programming',
-      columnToShowIn,
+    // 處理 Arduino 檔案 (右側)
+    await this.setupArduinoEditor();
+  }
+
+  private async setupArduinoEditor(): Promise<void> {
+    try {
+      console.log('Setting up Arduino editor');
+
+      // 檢查是否已有開啟的 Arduino 檔案
+      const activeEditor = vscode.window.activeTextEditor;
+      console.log('Active editor language:', activeEditor?.document.languageId);
+
+      if (activeEditor && activeEditor.document.languageId === 'arduino') {
+        console.log('Found existing Arduino file, moving to right side');
+        // 使用現有的 Arduino 檔案並移到右側
+        this.currentArduinoDocument = activeEditor.document;
+        await vscode.window.showTextDocument(
+          this.currentArduinoDocument,
+          {
+            viewColumn: vscode.ViewColumn.Two,
+            preserveFocus: false
+          }
+        );
+
+        // 設置文檔變更監聽器
+        this.setupDocumentChangeListener();
+
+        // 延遲初始同步將在 blocklyReady 事件中處理
+
+        return;
+      }
+
+      // 創建新的 Arduino 檔案
+      console.log('Creating new Arduino editor');
+      await this.createNewArduinoEditor();
+    } catch (error) {
+      console.error('設置 Arduino 編輯器失敗:', error);
+      vscode.window.showErrorMessage(
+        `設置 Arduino 編輯器失敗: ${(error as Error).message}`
+      );
+    }
+  }
+
+  private async createNewArduinoEditor(): Promise<void> {
+    const defaultCode = `// Arduino 程式碼
+// 由 TextBlockly 生成
+
+void setup() {
+  // 初始化程式碼
+}
+
+void loop() {
+  // 主要程式邏輯
+}`;
+
+    console.log('Creating new document with arduino language');
+    this.currentArduinoDocument = await vscode.workspace.openTextDocument({
+      content: defaultCode,
+      language: 'arduino',
+    });
+
+    console.log('Opening document in column two');
+    await vscode.window.showTextDocument(
+      this.currentArduinoDocument,
       {
-        enableScripts: true,
-        retainContextWhenHidden: true,
-        localResourceRoots: [
-          vscode.Uri.joinPath(
-            this.context.extensionUri,
-            'node_modules',
-            'blockly'
-          ),
-          vscode.Uri.joinPath(this.context.extensionUri, 'resources'),
-        ],
+        viewColumn: vscode.ViewColumn.Two,
+        preserveFocus: false
       }
     );
 
-    this.panel.webview.html = this.getWebviewContent();
-    this.setupMessageHandling();
+    console.log('Arduino document created and shown');
 
-    this.panel.onDidDispose(() => {
-      this.panel = undefined;
+    // 設置文檔變更監聽器
+    this.setupDocumentChangeListener();
+
+    // 延遲初始同步將在 blocklyReady 事件中處理
+
+    vscode.window.showInformationMessage('已創建新的 Arduino 檔案在右側編輯器');
+  }
+
+  /**
+   * 設置文檔變更監聽器以實現雙向同步
+   */
+  private setupDocumentChangeListener(): void {
+    if (this.documentChangeListener) {
+      this.documentChangeListener.dispose();
+    }
+
+    if (!this.currentArduinoDocument) {
+      return;
+    }
+
+    console.log('Setting up document change listener');
+
+    this.documentChangeListener = vscode.workspace.onDidChangeTextDocument((event) => {
+      if (event.document === this.currentArduinoDocument && !this.syncInProgress) {
+        console.log('Arduino document changed - manual sync mode, auto sync disabled');
+        // 手動同步模式 - 不自動同步到積木
+      }
     });
+  }
+
+  /**
+   * 將程式碼同步到積木
+   */
+  private async syncCodeToBlocks(code: string, forceSync: boolean = false): Promise<void> {
+    try {
+      console.log('=== Starting syncCodeToBlocks ===');
+      console.log('Code to sync:', code.substring(0, 300) + '...');
+      console.log('Force sync:', forceSync);
+
+      // 防止無限循環（除非強制同步）
+      if (!forceSync && this.codeParser.codeEquals(code, this.lastGeneratedCode)) {
+        console.log('Code is same as last generated, skipping sync');
+        return;
+      }
+
+      console.log('Syncing code to blocks');
+
+      if (!this.codeParser.isValidArduinoCode(code)) {
+        console.log('Invalid Arduino code, skipping sync');
+        console.log('Code validity check failed for:', code.substring(0, 200));
+        vscode.window.showWarningMessage('Arduino 程式碼格式無效，請確保包含 void setup() 和 void loop() 函數');
+        return;
+      }
+
+      console.log('Code is valid Arduino code');
+      const parsedWorkspace = this.codeParser.parseCode(code);
+      console.log('Parsed workspace:', JSON.stringify(parsedWorkspace, null, 2));
+
+      const xml = this.codeParser.blocksToXml(parsedWorkspace);
+      console.log('Generated XML length:', xml.length);
+      console.log('Generated XML preview:', xml.substring(0, 500) + '...');
+
+      // 發送到 webview
+      if (this.panel?.webview) {
+        console.log('Sending loadWorkspace message to webview');
+        this.panel.webview.postMessage({
+          command: 'loadWorkspace',
+          data: { xml }
+        });
+        console.log('loadWorkspace message sent successfully');
+      } else {
+        console.log('ERROR: No webview panel available');
+        throw new Error('Webview panel not available');
+      }
+
+    } catch (error) {
+      console.error('同步程式碼到積木失敗:', error);
+      vscode.window.showErrorMessage(`同步失敗: ${(error as Error).message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 清理資源
+   */
+  private cleanup(): void {
+    if (this.documentChangeListener) {
+      this.documentChangeListener.dispose();
+      this.documentChangeListener = undefined;
+    }
+  }
+
+  private async updateArduinoEditor(code: string): Promise<void> {
+    try {
+      console.log('updateArduinoEditor called with code length:', code.length);
+      console.log('Code preview:', code.substring(0, 200) + '...');
+
+      // 設置同步標志防止循環
+      this.syncInProgress = true;
+
+      if (!this.currentArduinoDocument) {
+        console.log('No current Arduino document, creating new one');
+        await this.createNewArduinoEditor();
+      }
+
+      if (!this.currentArduinoDocument) {
+        throw new Error('Failed to create Arduino document');
+      }
+
+      // 找到對應的編輯器
+      const editor = vscode.window.visibleTextEditors.find(
+        (editor) => editor.document === this.currentArduinoDocument
+      );
+
+      console.log('Found editor:', !!editor);
+      console.log('Visible editors count:', vscode.window.visibleTextEditors.length);
+      console.log('Current Arduino document URI:', this.currentArduinoDocument?.uri.toString());
+      console.log('All visible editor URIs:', vscode.window.visibleTextEditors.map(e => e.document.uri.toString()));
+      console.log('All visible editor languages:', vscode.window.visibleTextEditors.map(e => e.document.languageId));
+
+      if (!editor) {
+        console.log('Editor not visible, reopening document');
+        // 如果編輯器不可見，重新開啟
+        const showTextResult = await vscode.window.showTextDocument(
+          this.currentArduinoDocument!,
+          {
+            viewColumn: vscode.ViewColumn.Two,
+            preserveFocus: false,
+            preview: false
+          }
+        );
+        console.log('showTextDocument result:', showTextResult.document.uri.toString());
+
+        // 等待一下讓編輯器完全載入
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        // 重新找到編輯器
+        const newEditor = vscode.window.visibleTextEditors.find(
+          (editor) => editor.document === this.currentArduinoDocument
+        );
+        if (newEditor) {
+          console.log('Found new editor after reopening, updating content');
+          await this.replaceEditorContent(newEditor, code);
+          console.log('Content updated successfully');
+        } else {
+          console.log('Still no editor found after reopening');
+          // 強制更新內容
+          await this.forceUpdateContent(code);
+        }
+      } else {
+        console.log('Updating existing editor');
+        await this.replaceEditorContent(editor, code);
+        console.log('Existing editor content updated successfully');
+      }
+    } catch (error) {
+      console.error('更新 Arduino 編輯器失敗:', error);
+      vscode.window.showErrorMessage(`同步失敗: ${(error as Error).message}`);
+    } finally {
+      // 重置同步標志並設置最後生成的程式碼
+      setTimeout(() => {
+        this.syncInProgress = false;
+        this.lastGeneratedCode = code;
+      }, 100);
+    }
+  }
+
+  private async replaceEditorContent(
+    editor: vscode.TextEditor,
+    code: string
+  ): Promise<void> {
+    const document = editor.document;
+    const fullRange = new vscode.Range(
+      document.positionAt(0),
+      document.positionAt(document.getText().length)
+    );
+
+    await editor.edit((editBuilder) => {
+      editBuilder.replace(fullRange, code);
+    });
+  }
+
+  private async forceUpdateContent(code: string): Promise<void> {
+    try {
+      console.log('Force updating content using WorkspaceEdit');
+
+      const workspaceEdit = new vscode.WorkspaceEdit();
+      const fullRange = new vscode.Range(
+        this.currentArduinoDocument!.positionAt(0),
+        this.currentArduinoDocument!.positionAt(this.currentArduinoDocument!.getText().length)
+      );
+
+      workspaceEdit.replace(this.currentArduinoDocument!.uri, fullRange, code);
+      await vscode.workspace.applyEdit(workspaceEdit);
+
+      console.log('Force update completed');
+    } catch (error) {
+      console.error('Force update failed:', error);
+      throw error;
+    }
   }
 
   private getWebviewContent(): string {
@@ -163,6 +447,8 @@ export class BlocklyViewProvider {
   }
 
   private async handleMessage(message: any): Promise<void> {
+    console.log('Received message:', message.command);
+
     switch (message.command) {
       case 'workspaceChanged':
         await this.handleWorkspaceChanged(message.data);
@@ -170,6 +456,11 @@ export class BlocklyViewProvider {
 
       case 'codeGenerated':
         await this.handleCodeGenerated(message.data);
+        break;
+
+      case 'smartSyncCode':
+        console.log('Handling smartSyncCode message');
+        await this.updateArduinoEditor(message.data.code);
         break;
 
       case 'saveTemplate':
@@ -184,6 +475,50 @@ export class BlocklyViewProvider {
         await this.handleRunCode();
         break;
 
+      case 'syncCodeToEditor':
+        await this.codeSyncManager.syncBlocksToCode(message.data.code);
+        vscode.window.showInformationMessage('程式碼已同步到編輯器');
+        break;
+
+      case 'blocklyReady':
+        console.log('Blockly is ready in manual sync mode');
+        // 手動同步模式 - 不執行自動初始同步
+        vscode.window.showInformationMessage('Blockly 已就緒，使用工具列按鈕進行手動同步');
+        break;
+
+      case 'manualSyncToCode':
+        console.log('Handling manual sync to code');
+        console.log('Code to sync:', message.data.code.substring(0, 200) + '...');
+        console.log('Current Arduino document exists:', !!this.currentArduinoDocument);
+
+        try {
+          await this.updateArduinoEditor(message.data.code);
+          vscode.window.showInformationMessage('積木已同步到程式碼');
+        } catch (error) {
+          console.error('Error in manual sync to code:', error);
+          vscode.window.showErrorMessage(`同步失敗: ${(error as Error).message}`);
+        }
+        break;
+
+      case 'manualSyncToBlocks':
+        console.log('Handling manual sync to blocks');
+        try {
+          if (this.currentArduinoDocument) {
+            const code = this.currentArduinoDocument.getText();
+            console.log('Current Arduino code length:', code.length);
+            console.log('Code preview:', code.substring(0, 200) + '...');
+
+            await this.syncCodeToBlocks(code, true);
+            vscode.window.showInformationMessage('程式碼已同步到積木');
+          } else {
+            vscode.window.showWarningMessage('沒有開啟的 Arduino 檔案');
+          }
+        } catch (error) {
+          console.error('Error in manual sync to blocks:', error);
+          vscode.window.showErrorMessage(`同步失敗: ${(error as Error).message}`);
+        }
+        break;
+
       default:
         console.warn('未知的 webview 命令:', message.command);
     }
@@ -195,8 +530,9 @@ export class BlocklyViewProvider {
   }
 
   private async handleCodeGenerated(data: { code: string }): Promise<void> {
-    // 同步生成的程式碼到編輯器
-    await this.codeSyncManager.syncBlocksToCode(data.code);
+    // 只是接收程式碼生成事件，不自動同步到檔案
+    // 程式碼已經在 webview 中顯示，用戶需要主動按「執行」才會同步到檔案
+    console.log('Code generated:', data.code.substring(0, 100) + '...');
   }
 
   private async handleSaveTemplate(data: { xml: string }): Promise<void> {
@@ -274,31 +610,17 @@ export class BlocklyViewProvider {
 
   private async handleRunCode(): Promise<void> {
     try {
-      // 觸發程式碼同步
+      // 首先請求 webview 提供當前的程式碼
       this.panel?.webview.postMessage({
-        command: 'syncCode',
+        command: 'requestCurrentCode',
       });
 
-      vscode.window.showInformationMessage('程式碼已同步到編輯器');
+      // 註：實際的同步會在 webview 回應時處理
     } catch (error) {
       vscode.window.showErrorMessage(`執行失敗: ${(error as Error).message}`);
     }
   }
 
-  /**
-   * 從外部同步程式碼到積木
-   */
-  public async syncCodeToBlocks(_code: string): Promise<void> {
-    try {
-      // 這裡將實作程式碼解析邏輯
-      // 暫時顯示提示訊息
-      vscode.window.showInformationMessage('程式碼到積木的同步功能正在開發中');
-    } catch (error) {
-      vscode.window.showErrorMessage(
-        `同步程式碼到積木失敗: ${(error as Error).message}`
-      );
-    }
-  }
 
   /**
    * 載入工作區
