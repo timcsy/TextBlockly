@@ -25,19 +25,22 @@ export class BlocklyViewProvider {
     this.codeParser = new ArduinoCodeParser();
   }
 
-  public async createOrShow(): Promise<void> {
-    console.log('BlocklyViewProvider: createOrShow called');
+  public async createOrShow(targetUri?: vscode.Uri): Promise<void> {
+    console.log('BlocklyViewProvider: createOrShow called', targetUri?.toString());
 
-    // 先處理 Blockly webview (左側)
+    // 先處理 Blockly webview
+    // 統一將 Blockly View 放在右側
+    const targetColumn = vscode.ViewColumn.Two;
+
     if (this.panel) {
       console.log('BlocklyViewProvider: Revealing existing panel');
-      this.panel.reveal(vscode.ViewColumn.One);
+      this.panel.reveal(targetColumn);
     } else {
       console.log('BlocklyViewProvider: Creating new panel');
       this.panel = vscode.window.createWebviewPanel(
         'textblockly',
         'TextBlockly - Visual Programming',
-        vscode.ViewColumn.One,
+        targetColumn,
         {
           enableScripts: true,
           enableForms: true,
@@ -56,33 +59,92 @@ export class BlocklyViewProvider {
       this.panel.webview.html = this.getWebviewContent();
       this.setupMessageHandling();
 
-      this.panel.onDidDispose(() => {
-        this.panel = undefined;
-        this.currentArduinoDocument = undefined;
-        this.cleanup();
+      this.panel.onDidDispose(async () => {
+        console.log('Blockly panel disposed, cleaning up...');
+
+        // 延遲清理以確保 UI 狀態穩定
+        setTimeout(async () => {
+          await this.cleanupDuplicateEditors();
+          this.panel = undefined;
+          this.currentArduinoDocument = undefined;
+          this.cleanup();
+        }, 100);
       });
     }
 
-    // 處理 Arduino 檔案 (右側)
-    await this.setupArduinoEditor();
+    // 處理 Arduino 檔案 (左側) - 立即執行以確保檢測到當前檔案
+    await this.setupArduinoEditor(targetUri);
   }
 
-  private async setupArduinoEditor(): Promise<void> {
+  private async setupArduinoEditor(targetUri?: vscode.Uri): Promise<void> {
     try {
-      console.log('Setting up Arduino editor');
+      console.log('Setting up Arduino editor', targetUri?.toString());
 
-      // 檢查是否已有開啟的 Arduino 檔案
+      // 1. 優先使用指定的檔案
+      if (targetUri && targetUri.path.endsWith('.ino')) {
+        console.log('Using specified Arduino file:', targetUri.toString());
+        try {
+          this.currentArduinoDocument = await vscode.workspace.openTextDocument(targetUri);
+
+          // Arduino 編輯器在左側
+          await vscode.window.showTextDocument(
+            this.currentArduinoDocument,
+            {
+              viewColumn: vscode.ViewColumn.One,
+              preserveFocus: false
+            }
+          );
+
+          this.setupDocumentChangeListener();
+          return;
+        } catch (error) {
+          console.error('Failed to open specified file:', error);
+          vscode.window.showErrorMessage(`無法開啟指定檔案: ${targetUri.fsPath}`);
+        }
+      }
+
+      // 2. 檢查是否已有開啟的 Arduino 檔案
       const activeEditor = vscode.window.activeTextEditor;
-      console.log('Active editor language:', activeEditor?.document.languageId);
+      const allVisibleEditors = vscode.window.visibleTextEditors;
 
-      if (activeEditor && activeEditor.document.languageId === 'arduino') {
-        console.log('Found existing Arduino file, moving to right side');
-        // 使用現有的 Arduino 檔案並移到右側
-        this.currentArduinoDocument = activeEditor.document;
+      console.log('=== Arduino File Detection ===');
+      console.log('Active editor:', activeEditor?.document.fileName);
+      console.log('Active editor language:', activeEditor?.document.languageId);
+      console.log('All visible editors:', allVisibleEditors.map(e => ({
+        fileName: e.document.fileName,
+        languageId: e.document.languageId,
+        isUntitled: e.document.isUntitled
+      })));
+
+      // 先檢查 activeEditor
+      let arduinoEditor = activeEditor;
+      let isArduinoFile = activeEditor && (
+        activeEditor.document.languageId === 'arduino' ||
+        activeEditor.document.fileName.endsWith('.ino') ||
+        (activeEditor.document.languageId === 'cpp' && activeEditor.document.fileName.includes('.ino'))
+      );
+
+      // 如果 activeEditor 不是 Arduino 檔案，檢查所有可見的編輯器
+      if (!isArduinoFile) {
+        console.log('Active editor is not Arduino file, checking all visible editors...');
+        arduinoEditor = allVisibleEditors.find(editor =>
+          editor.document.languageId === 'arduino' ||
+          editor.document.fileName.endsWith('.ino') ||
+          (editor.document.languageId === 'cpp' && editor.document.fileName.includes('.ino'))
+        );
+        isArduinoFile = !!arduinoEditor;
+      }
+
+      if (isArduinoFile && arduinoEditor) {
+        console.log('✅ Found existing Arduino file, using it:', arduinoEditor.document.fileName);
+        // 使用現有的 Arduino 檔案
+        this.currentArduinoDocument = arduinoEditor.document;
+
+        // Arduino 編輯器移動到左側
         await vscode.window.showTextDocument(
           this.currentArduinoDocument,
           {
-            viewColumn: vscode.ViewColumn.Two,
+            viewColumn: vscode.ViewColumn.One,
             preserveFocus: false
           }
         );
@@ -90,13 +152,67 @@ export class BlocklyViewProvider {
         // 設置文檔變更監聽器
         this.setupDocumentChangeListener();
 
-        // 延遲初始同步將在 blocklyReady 事件中處理
-
+        console.log('✅ Using existing Arduino file successfully');
         return;
+      } else {
+        console.log('❌ No Arduino file found in active or visible editors');
       }
 
-      // 創建新的 Arduino 檔案
+      // 3. 在工作區中搜索 Arduino 檔案
+      const workspaceFiles = await vscode.workspace.findFiles('**/*.ino', '**/node_modules/**', 10);
+      if (workspaceFiles.length > 0) {
+        console.log('Found Arduino files in workspace:', workspaceFiles.map(f => f.toString()));
+
+        // 如果只有一個檔案，直接使用它
+        if (workspaceFiles.length === 1) {
+          console.log('Using single Arduino file found in workspace');
+          this.currentArduinoDocument = await vscode.workspace.openTextDocument(workspaceFiles[0]);
+
+          // Arduino 編輯器在左側
+          await vscode.window.showTextDocument(
+            this.currentArduinoDocument,
+            {
+              viewColumn: vscode.ViewColumn.One,
+              preserveFocus: false
+            }
+          );
+
+          this.setupDocumentChangeListener();
+          return;
+        }
+
+        // 如果有多個檔案，讓用戶選擇
+        const fileItems = workspaceFiles.map(file => ({
+          label: vscode.workspace.asRelativePath(file),
+          description: file.fsPath,
+          uri: file
+        }));
+
+        const selected = await vscode.window.showQuickPick(fileItems, {
+          placeHolder: '選擇要編輯的 Arduino 檔案'
+        });
+
+        if (selected) {
+          console.log('User selected Arduino file:', selected.uri.toString());
+          this.currentArduinoDocument = await vscode.workspace.openTextDocument(selected.uri);
+
+          // Arduino 編輯器在左側
+          await vscode.window.showTextDocument(
+            this.currentArduinoDocument,
+            {
+              viewColumn: vscode.ViewColumn.One,
+              preserveFocus: false
+            }
+          );
+
+          this.setupDocumentChangeListener();
+          return;
+        }
+      }
+
+      // 4. 最後選項：創建新的 Arduino 檔案
       console.log('Creating new Arduino editor');
+      // 確保先有 Blockly View，再創建 Arduino 編輯器
       await this.createNewArduinoEditor();
     } catch (error) {
       console.error('設置 Arduino 編輯器失敗:', error);
@@ -124,14 +240,31 @@ void loop() {
       language: 'arduino',
     });
 
-    console.log('Opening document in column two');
+    // Arduino 編輯器在左側，但要確保與 Blockly View 分開
+    console.log('Opening document in left column');
+
+    // 檢查當前的編輯器狀態，決定如何佈局
+    const visibleEditors = vscode.window.visibleTextEditors;
+    console.log('Current visible editors:', visibleEditors.length);
+
+    // 如果已經有 Blockly View 在右側，Arduino 檔案放左側
+    // 如果沒有其他編輯器，先確保能分開顯示
+    const targetColumn = visibleEditors.length === 0 ? vscode.ViewColumn.One : vscode.ViewColumn.One;
+
     await vscode.window.showTextDocument(
       this.currentArduinoDocument,
       {
-        viewColumn: vscode.ViewColumn.Two,
+        viewColumn: targetColumn,
         preserveFocus: false
       }
     );
+
+    // 短暫延遲後，確保 Blockly View 在右側
+    setTimeout(() => {
+      if (this.panel) {
+        this.panel.reveal(vscode.ViewColumn.Two);
+      }
+    }, 200);
 
     console.log('Arduino document created and shown');
 
@@ -140,7 +273,7 @@ void loop() {
 
     // 延遲初始同步將在 blocklyReady 事件中處理
 
-    vscode.window.showInformationMessage('已創建新的 Arduino 檔案在右側編輯器');
+    vscode.window.showInformationMessage('已創建新的 Arduino 檔案在左側編輯器');
   }
 
   /**
@@ -227,6 +360,79 @@ void loop() {
     }
   }
 
+  /**
+   * 檢測是否在 Arduino IDE 環境中運行
+   */
+  private detectArduinoIDEEnvironment(): boolean {
+    try {
+      // 檢查環境變數或其他 Arduino IDE 特徵
+      const workspaceName = vscode.workspace.name;
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+
+      // Arduino IDE 可能會有特定的工作區設定
+      console.log('Workspace name:', workspaceName);
+      console.log('Workspace folders:', workspaceFolders?.map(f => f.name));
+
+      // 檢查是否有 Arduino IDE 的特徵：
+      // 1. 工作區名稱可能包含 arduino
+      // 2. 檔案結構可能不同
+      // 3. VSCode 視窗配置可能不同
+
+      const hasArduinoFeatures = (
+        workspaceName?.toLowerCase().includes('arduino') ||
+        workspaceFolders?.some(f => f.name.toLowerCase().includes('arduino')) ||
+        vscode.window.visibleTextEditors.length <= 1 // Arduino IDE 通常只顯示一個編輯器
+      );
+
+      console.log('Arduino IDE environment detected:', hasArduinoFeatures);
+      return hasArduinoFeatures;
+    } catch (error) {
+      console.error('Error detecting Arduino IDE environment:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 清理重複的 Arduino 編輯器視窗
+   */
+  private async cleanupDuplicateEditors(): Promise<void> {
+    try {
+      if (!this.currentArduinoDocument) {
+        return;
+      }
+
+      console.log('Cleaning up duplicate Arduino editors');
+
+      // 找到所有顯示相同 Arduino 檔案的編輯器
+      const duplicateEditors = vscode.window.visibleTextEditors.filter(
+        (editor) => editor.document === this.currentArduinoDocument
+      );
+
+      console.log(`Found ${duplicateEditors.length} editors for the same Arduino file`);
+
+      // 如果有多個編輯器顯示同一個檔案，保留第一個並關閉其他的
+      if (duplicateEditors.length > 1) {
+        console.log('Multiple editors found, consolidating to Column One');
+
+        // 保留第一個編輯器並移到 Column One
+        const primaryEditor = duplicateEditors[0];
+        await vscode.window.showTextDocument(
+          primaryEditor.document,
+          {
+            viewColumn: vscode.ViewColumn.One,
+            preserveFocus: false,
+            preview: false
+          }
+        );
+
+        console.log('Primary editor moved to Column One');
+      }
+    } catch (error) {
+      console.error('清理重複編輯器時發生錯誤:', error);
+      // 不顯示錯誤訊息給用戶，因為這是內部清理操作
+    }
+  }
+
   private async updateArduinoEditor(code: string): Promise<void> {
     try {
       console.log('updateArduinoEditor called with code length:', code.length);
@@ -258,10 +464,11 @@ void loop() {
       if (!editor) {
         console.log('Editor not visible, reopening document');
         // 如果編輯器不可見，重新開啟
+        // Arduino 編輯器在左側
         const showTextResult = await vscode.window.showTextDocument(
           this.currentArduinoDocument!,
           {
-            viewColumn: vscode.ViewColumn.Two,
+            viewColumn: vscode.ViewColumn.One,
             preserveFocus: false,
             preview: false
           }
