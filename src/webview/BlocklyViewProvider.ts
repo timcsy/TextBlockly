@@ -271,7 +271,7 @@ void loop() {
     // 設置文檔變更監聽器
     this.setupDocumentChangeListener();
 
-    // 延遲初始同步將在 blocklyReady 事件中處理
+    // 初始同步將在 blocklyReady 事件中自動執行
 
     vscode.window.showInformationMessage('已創建新的 Arduino 檔案在左側編輯器');
   }
@@ -688,9 +688,24 @@ void loop() {
         break;
 
       case 'blocklyReady':
-        console.log('Blockly is ready in manual sync mode');
-        // 手動同步模式 - 不執行自動初始同步
-        vscode.window.showInformationMessage('Blockly 已就緒，使用工具列按鈕進行手動同步');
+        console.log('Blockly is ready - starting auto sync from code to blocks');
+        try {
+          if (this.currentArduinoDocument) {
+            const code = this.currentArduinoDocument.getText();
+            console.log('Auto-syncing code to blocks on startup:', code.length, 'characters');
+            console.log('Code preview:', code.substring(0, 200) + '...');
+
+            // 自動同步程式碼到積木
+            await this.syncCodeToBlocks(code, true);
+            vscode.window.showInformationMessage('Blockly 已就緒，程式碼已自動同步到積木');
+          } else {
+            console.log('No Arduino document available for auto sync');
+            vscode.window.showInformationMessage('Blockly 已就緒');
+          }
+        } catch (error) {
+          console.error('Auto sync on startup failed:', error);
+          vscode.window.showInformationMessage('Blockly 已就緒，但自動同步失敗');
+        }
         break;
 
       case 'manualSyncToCode':

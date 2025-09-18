@@ -163,12 +163,11 @@
         <!-- 工具列 -->
         <div class="toolbar">
             <button id="saveBtn" title="儲存為模板">💾 儲存</button>
-            <button id="loadBtn" title="載入模板">📁 載入</button>
+            <button id="loadBtn" title="載入模板">📂 載入</button>
             <button id="clearBtn" title="清空工作區">🗑️ 清空</button>
-            <button id="testBtn" title="創建測試積木">🧪 測試</button>
             <div style="border-left: 1px solid var(--vscode-panel-border); margin: 0 8px; height: 20px;"></div>
-            <button id="syncToCodeBtn" title="將積木同步到程式碼">➡️ 同步到程式碼</button>
-            <button id="syncToBlocksBtn" title="將程式碼同步到積木">⬅️ 同步到積木</button>
+            <button id="syncToCodeBtn" title="將積木同步到程式碼">🔄 同步到程式碼</button>
+            <button id="syncToBlocksBtn" title="將程式碼同步到積木">🔃 同步到積木</button>
             <div class="loading" id="loading">
                 <div class="spinner"></div>
                 <span>同步中...</span>
@@ -1627,10 +1626,6 @@ ${formattedLoopCode}
             }
         });
 
-        document.getElementById('testBtn').addEventListener('click', () => {
-            console.log('Test button clicked - creating test blocks');
-            createTestBlocks();
-        });
 
         document.getElementById('syncToCodeBtn').addEventListener('click', () => {
             console.log('Sync to code button clicked');
