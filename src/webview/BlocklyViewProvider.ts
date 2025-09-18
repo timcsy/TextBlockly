@@ -315,11 +315,13 @@ void loop() {
 
       console.log('Syncing code to blocks');
 
+      // 寬鬆檢查：如果沒有 setup/loop 函數，給予提示但仍然嘗試同步
       if (!this.codeParser.isValidArduinoCode(code)) {
-        console.log('Invalid Arduino code, skipping sync');
-        console.log('Code validity check failed for:', code.substring(0, 200));
-        vscode.window.showWarningMessage('Arduino 程式碼格式無效，請確保包含 void setup() 和 void loop() 函數');
-        return;
+        console.log('Code does not have standard Arduino structure, but attempting sync anyway');
+        console.log('Code preview:', code.substring(0, 200));
+        if (code.trim().length > 0) {
+          vscode.window.showInformationMessage('程式碼將同步到積木，但建議包含 void setup() 和 void loop() 函數');
+        }
       }
 
       console.log('Code is valid Arduino code');

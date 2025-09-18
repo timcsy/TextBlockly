@@ -44,13 +44,7 @@ export class ArduinoBlocks {
           {
             type: 'input_value',
             name: 'PIN',
-            check: 'Number',
-            shadow: {
-              type: 'math_number',
-              fields: {
-                NUM: 13
-              }
-            }
+            check: null,
           },
           {
             type: 'field_dropdown',
@@ -76,13 +70,7 @@ export class ArduinoBlocks {
           {
             type: 'input_value',
             name: 'PIN',
-            check: 'Number',
-            shadow: {
-              type: 'math_number',
-              fields: {
-                NUM: 2
-              }
-            }
+            check: null,
           },
         ],
         output: 'Boolean',
@@ -98,13 +86,7 @@ export class ArduinoBlocks {
           {
             type: 'input_value',
             name: 'PIN',
-            check: 'Number',
-            shadow: {
-              type: 'math_number',
-              fields: {
-                NUM: 13
-              }
-            }
+            check: null,
           },
           {
             type: 'field_dropdown',
@@ -139,18 +121,12 @@ export class ArduinoBlocks {
           {
             type: 'input_value',
             name: 'PIN',
-            check: ['Number', 'String'],
-            shadow: {
-              type: 'text',
-              fields: {
-                TEXT: 'A0'
-              }
-            }
+            check: null,
           },
         ],
         output: 'Number',
         colour: 160,
-        tooltip: '讀取類比腳位的值 (0-1023)，支援A0-A5或變數',
+        tooltip: '讀取類比腳位的值 (0-1023)',
         helpUrl:
           'https://www.arduino.cc/reference/en/language/functions/analog-io/analogread/',
       },
@@ -161,7 +137,7 @@ export class ArduinoBlocks {
           {
             type: 'input_value',
             name: 'PIN',
-            check: 'Number',
+            check: null,
             shadow: {
               type: 'math_number',
               fields: {
@@ -173,12 +149,6 @@ export class ArduinoBlocks {
             type: 'input_value',
             name: 'VALUE',
             check: 'Number',
-            shadow: {
-              type: 'math_number',
-              fields: {
-                NUM: 128
-              }
-            }
           },
         ],
         inputsInline: true,
@@ -196,7 +166,7 @@ export class ArduinoBlocks {
           {
             type: 'field_input',
             name: 'PIN',
-            text: 'A0',
+            text: '',
           },
         ],
         output: 'String',
@@ -228,7 +198,7 @@ export class ArduinoBlocks {
           {
             type: 'field_input',
             name: 'CODE',
-            text: '',
+            text: '表達式',
             spellcheck: false,
           },
         ],
@@ -239,13 +209,16 @@ export class ArduinoBlocks {
       },
       {
         type: 'arduino_raw_block',
-        message0: '%1 %2',
+        message0: '%1 %2 %3',
         args0: [
           {
             type: 'field_input',
             name: 'CODE',
-            text: '',
+            text: '區塊',
             spellcheck: false,
+          },
+          {
+            type: 'input_dummy',
           },
           {
             type: 'input_statement',
@@ -256,6 +229,79 @@ export class ArduinoBlocks {
         nextStatement: null,
         colour: 30,
         tooltip: '萬用區塊積木：直接輸入控制結構（如 if、for 等）',
+        helpUrl: '',
+      },
+      {
+        type: 'arduino_raw_statement_with_expression',
+        message0: '%1 %2',
+        args0: [
+          {
+            type: 'field_input',
+            name: 'CODE',
+            text: '敘述',
+            spellcheck: false,
+          },
+          {
+            type: 'input_value',
+            name: 'EXPRESSION',
+            check: null,
+          },
+        ],
+        previousStatement: null,
+        nextStatement: null,
+        colour: 30,
+        tooltip: '敘述後面可接表達式',
+        helpUrl: '',
+      },
+      {
+        type: 'arduino_raw_expression_with_expression',
+        message0: '%1 %2',
+        args0: [
+          {
+            type: 'field_input',
+            name: 'CODE',
+            text: '表達式',
+            spellcheck: false,
+          },
+          {
+            type: 'input_value',
+            name: 'EXPRESSION',
+            check: null,
+          },
+        ],
+        output: null,
+        colour: 30,
+        tooltip: '表達式後面可接表達式',
+        helpUrl: '',
+      },
+      {
+        type: 'arduino_raw_block_with_expression',
+        message0: '%1 %2 %3 %4',
+        args0: [
+          {
+            type: 'field_input',
+            name: 'CODE',
+            text: '區塊',
+            spellcheck: false,
+          },
+          {
+            type: 'input_value',
+            name: 'EXPRESSION',
+            check: null,
+          },
+          {
+            type: 'input_dummy',
+          },
+          {
+            type: 'input_statement',
+            name: 'STATEMENTS',
+          },
+        ],
+        inputsInline: true,
+        previousStatement: null,
+        nextStatement: null,
+        colour: 30,
+        tooltip: '區塊後面可接表達式',
         helpUrl: '',
       },
     ];
@@ -468,8 +514,10 @@ export class ArduinoBlocks {
               inputs: {
                 PIN: {
                   shadow: {
-                    type: 'math_number',
-                    fields: { NUM: 13 }
+                    type: 'arduino_raw_expression',
+                    fields: {
+                      CODE: '13'
+                    }
                   }
                 }
               }
@@ -480,8 +528,10 @@ export class ArduinoBlocks {
               inputs: {
                 PIN: {
                   shadow: {
-                    type: 'math_number',
-                    fields: { NUM: 2 }
+                    type: 'arduino_raw_expression',
+                    fields: {
+                      CODE: '13'
+                    }
                   }
                 }
               }
@@ -492,8 +542,10 @@ export class ArduinoBlocks {
               inputs: {
                 PIN: {
                   shadow: {
-                    type: 'math_number',
-                    fields: { NUM: 13 }
+                    type: 'arduino_raw_expression',
+                    fields: {
+                      CODE: '13'
+                    }
                   }
                 }
               }
@@ -511,8 +563,10 @@ export class ArduinoBlocks {
               inputs: {
                 PIN: {
                   shadow: {
-                    type: 'text',
-                    fields: { TEXT: 'A0' }
+                    type: 'arduino_raw_expression',
+                    fields: {
+                      CODE: 'A0'
+                    }
                   }
                 }
               }
@@ -523,14 +577,18 @@ export class ArduinoBlocks {
               inputs: {
                 PIN: {
                   shadow: {
-                    type: 'math_number',
-                    fields: { NUM: 9 }
+                    type: 'arduino_raw_expression',
+                    fields: {
+                      CODE: '9'
+                    }
                   }
                 },
                 VALUE: {
                   shadow: {
-                    type: 'math_number',
-                    fields: { NUM: 128 }
+                    type: 'arduino_raw_expression',
+                    fields: {
+                      CODE: '255'
+                    }
                   }
                 }
               }
@@ -601,7 +659,20 @@ export class ArduinoBlocks {
           colour: '310',
           contents: [
             { kind: 'block', type: 'variables_declare' },
-            { kind: 'block', type: 'variables_define' },
+            {
+              kind: 'block',
+              type: 'variables_define',
+              inputs: {
+                VALUE: {
+                  shadow: {
+                    type: 'arduino_raw_expression',
+                    fields: {
+                      CODE: '0'
+                    }
+                  }
+                }
+              }
+            },
           ],
         },
         {
@@ -617,26 +688,46 @@ export class ArduinoBlocks {
           contents: [
             {
               kind: 'block',
-              type: 'arduino_raw_statement',
+              type: 'arduino_raw_expression',
               fields: {
-                CODE: 'pinMode(13, OUTPUT);'
+                CODE: '表達式'
               }
             },
             {
               kind: 'block',
-              type: 'arduino_raw_expression',
+              type: 'arduino_raw_expression_with_expression',
               fields: {
-                CODE: 'digitalRead(2)'
+                CODE: '表達式'
+              }
+            },
+            {
+              kind: 'block',
+              type: 'arduino_raw_statement',
+              fields: {
+                CODE: '敘述'
+              }
+            },
+            {
+              kind: 'block',
+              type: 'arduino_raw_statement_with_expression',
+              fields: {
+                CODE: '敘述'
               }
             },
             {
               kind: 'block',
               type: 'arduino_raw_block',
               fields: {
-                CODE: 'for (int i = 0; i < 10; i++)'
+                CODE: '區塊'
               }
             },
-            { kind: 'block', type: 'arduino_pin' },
+            {
+              kind: 'block',
+              type: 'arduino_raw_block_with_expression',
+              fields: {
+                CODE: '區塊'
+              }
+            },
           ],
         },
       ],
