@@ -114,16 +114,27 @@ TextBlockly/
 ## 積木分類
 
 ### 基礎分類
-- 數位 I/O 控制
-- 類比訊號處理
-- 感測器讀取
-- 控制流程（if/else/loop）
+- **數位 I/O**: `digitalWrite`, `digitalRead`, `pinMode`
+- **類比訊號**: `analogRead`, `analogWrite`
+- **控制流程**: 條件判斷、迴圈、函數
+
+### Arduino 函數庫
+- **Serial 通信**: `Serial.begin`, `Serial.print`, `Serial.read`, `Serial.available`
+- **數學函數**: `map`, `constrain`, `min`, `max`, `abs`, `pow`, `sqrt`
+- **時間函數**: `delay`, `millis`, `micros`, `delayMicroseconds`
+- **隨機數**: `random`, `randomSeed`
+
+### 程式結構
+- **變數操作**: 定義、賦值、取值
+- **文字處理**: 字串操作、數字轉換（11種功能）
+- **邏輯運算**: AND, OR, NOT 邏輯判斷
+- **數學運算**: 四則運算、比較運算
 
 ### 進階分類
-- 通訊協議（UART/I2C/SPI）
-- 馬達控制
-- 顯示器操作
-- 音效控制
+- **通訊協議**: UART/I2C/SPI
+- **馬達控制**: 步進馬達、伺服馬達
+- **感測器**: 溫濕度、距離、光線感測器
+- **顯示器**: LCD、OLED、七段顯示器
 
 ### 專案分類
 - 物聯網應用

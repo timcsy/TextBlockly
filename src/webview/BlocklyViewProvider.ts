@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { TemplateManager } from '../template/TemplateManager';
 import { CodeSyncManager } from '../sync/CodeSyncManager';
+import { ASTSyncManager } from '../sync/ASTSyncManager';
 import { ArduinoBlocks } from '../blockly/ArduinoBlocks';
 import { ArduinoCodeGenerator } from '../arduino/CodeGenerator';
 import { ArduinoCodeParser } from '../arduino/CodeParser';
@@ -11,6 +12,7 @@ export class BlocklyViewProvider {
   private panel: vscode.WebviewPanel | undefined;
   private codeGenerator: ArduinoCodeGenerator;
   private codeParser: ArduinoCodeParser;
+  private astSyncManager: ASTSyncManager;
   private currentArduinoDocument: vscode.TextDocument | undefined;
   private documentChangeListener: vscode.Disposable | undefined;
   private lastGeneratedCode: string = '';
@@ -23,6 +25,7 @@ export class BlocklyViewProvider {
   ) {
     this.codeGenerator = new ArduinoCodeGenerator();
     this.codeParser = new ArduinoCodeParser();
+    this.astSyncManager = new ASTSyncManager();
   }
 
   public async createOrShow(targetUri?: vscode.Uri): Promise<void> {
@@ -303,7 +306,7 @@ void loop() {
    */
   private async syncCodeToBlocks(code: string, forceSync: boolean = false): Promise<void> {
     try {
-      console.log('=== Starting syncCodeToBlocks ===');
+      console.log('=== Starting AST syncCodeToBlocks ===');
       console.log('Code to sync:', code.substring(0, 300) + '...');
       console.log('Force sync:', forceSync);
 
@@ -313,22 +316,24 @@ void loop() {
         return;
       }
 
-      console.log('Syncing code to blocks');
+      console.log('Using AST Sync Manager for code conversion');
 
-      // 寬鬆檢查：如果沒有 setup/loop 函數，給予提示但仍然嘗試同步
-      if (!this.codeParser.isValidArduinoCode(code)) {
-        console.log('Code does not have standard Arduino structure, but attempting sync anyway');
-        console.log('Code preview:', code.substring(0, 200));
-        if (code.trim().length > 0) {
-          vscode.window.showInformationMessage('程式碼將同步到積木，但建議包含 void setup() 和 void loop() 函數');
-        }
+      // 使用新的AST同步管理器
+      const syncResult = await this.astSyncManager.syncCodeToBlocks(code);
+
+      if (!syncResult.success) {
+        console.error('AST同步失敗:', syncResult.error);
+        vscode.window.showErrorMessage(`同步失敗: ${syncResult.error}`);
+        return;
       }
 
-      console.log('Code is valid Arduino code');
-      const parsedWorkspace = this.codeParser.parseCode(code);
-      console.log('Parsed workspace:', JSON.stringify(parsedWorkspace, null, 2));
+      console.log('AST同步成功!');
+      if (syncResult.warnings && syncResult.warnings.length > 0) {
+        console.log('警告:', syncResult.warnings);
+        vscode.window.showWarningMessage(`同步完成，但有警告: ${syncResult.warnings.join(', ')}`);
+      }
 
-      const xml = this.codeParser.blocksToXml(parsedWorkspace);
+      const xml = syncResult.xml!;
       console.log('Generated XML length:', xml.length);
       console.log('Generated XML preview:', xml.substring(0, 500) + '...');
 

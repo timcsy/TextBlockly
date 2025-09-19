@@ -192,15 +192,20 @@ export class ArduinoCodeParser {
 
       const conditionBlock = this.parseCondition(condition);
 
-      return {
+      const result: ParsedBlock = {
         type: 'controls_if',
         fields: {},
         inputs: {
           IF0: conditionBlock,
-          DO0: this.parseCodeBlock(ifBody || ''),
-          ELSE: elseBody ? this.parseCodeBlock(elseBody) : undefined
+          DO0: this.parseCodeBlock(ifBody || '')
         }
       };
+
+      if (elseBody) {
+        result.inputs.ELSE = this.parseCodeBlock(elseBody);
+      }
+
+      return result;
     } catch (error) {
       console.warn('Error parsing if statement:', error);
       return null;
@@ -367,9 +372,201 @@ export class ArduinoCodeParser {
   }
 
   /**
-   * 解析值表達式
+   * 解析表達式 - 改進版的parseValue，支援更多表達式類型
+   */
+  private parseExpression(expr: string): ParsedBlock | null {
+    expr = expr.trim();
+    if (!expr) return null;
+
+    // 1. 數字 (整數和小數)
+    if (/^\d+(\.\d+)?$/.test(expr)) {
+      return {
+        type: 'math_number',
+        fields: { NUM: parseFloat(expr) },
+        inputs: {}
+      };
+    }
+
+    // 2. 字串 (用引號包圍)
+    if (/^["'].*["']$/.test(expr)) {
+      return {
+        type: 'text',
+        fields: { TEXT: expr.slice(1, -1) },
+        inputs: {}
+      };
+    }
+
+    // 3. Arduino常數
+    if (/^(HIGH|LOW|true|false|INPUT|OUTPUT|INPUT_PULLUP)$/i.test(expr)) {
+      const boolValue = ['HIGH', 'true', 'INPUT', 'OUTPUT', 'INPUT_PULLUP'].includes(expr.toUpperCase());
+      return {
+        type: 'logic_boolean',
+        fields: { BOOL: boolValue ? 'TRUE' : 'FALSE' },
+        inputs: {}
+      };
+    }
+
+    // 4. Arduino類比腳位 (A0, A1, etc.)
+    if (/^A\d+$/.test(expr)) {
+      return {
+        type: 'arduino_raw_expression',
+        fields: { CODE: expr },
+        inputs: {}
+      };
+    }
+
+    // 5. digitalRead(pin)
+    const digitalReadMatch = expr.match(/^digitalRead\s*\(\s*([^)]+)\s*\)$/);
+    if (digitalReadMatch) {
+      const pin = digitalReadMatch[1].trim();
+      return {
+        type: 'arduino_digitalread',
+        fields: {},
+        inputs: {
+          PIN: this.parseExpression(pin)
+        }
+      };
+    }
+
+    // 6. analogRead(pin)
+    const analogReadMatch = expr.match(/^analogRead\s*\(\s*([^)]+)\s*\)$/);
+    if (analogReadMatch) {
+      const pin = analogReadMatch[1].trim();
+      return {
+        type: 'arduino_analogread',
+        fields: {},
+        inputs: {
+          PIN: this.parseExpression(pin)
+        }
+      };
+    }
+
+    // 7. 數學運算 (+, -, *, /, %)
+    const mathOpMatch = expr.match(/^(.+?)\s*([+\-*/%])\s*(.+)$/);
+    if (mathOpMatch) {
+      const left = mathOpMatch[1].trim();
+      const operator = mathOpMatch[2];
+      const right = mathOpMatch[3].trim();
+
+      const opMap: { [key: string]: string } = {
+        '+': 'ADD',
+        '-': 'MINUS',
+        '*': 'MULTIPLY',
+        '/': 'DIVIDE',
+        '%': 'MODULO'
+      };
+
+      return {
+        type: 'math_arithmetic',
+        fields: { OP: opMap[operator] || 'ADD' },
+        inputs: {
+          A: this.parseExpression(left),
+          B: this.parseExpression(right)
+        }
+      };
+    }
+
+    // 8. 比較運算 (==, !=, >, <, >=, <=)
+    const compareMatch = expr.match(/^(.+?)\s*(==|!=|>=|<=|>|<)\s*(.+)$/);
+    if (compareMatch) {
+      const left = compareMatch[1].trim();
+      const operator = compareMatch[2];
+      const right = compareMatch[3].trim();
+
+      const opMap: { [key: string]: string } = {
+        '==': 'EQ',
+        '!=': 'NEQ',
+        '>': 'GT',
+        '<': 'LT',
+        '>=': 'GTE',
+        '<=': 'LTE'
+      };
+
+      return {
+        type: 'logic_compare',
+        fields: { OP: opMap[operator] || 'EQ' },
+        inputs: {
+          A: this.parseExpression(left),
+          B: this.parseExpression(right)
+        }
+      };
+    }
+
+    // 9. 邏輯運算 (&&, ||)
+    const logicMatch = expr.match(/^(.+?)\s*(&&|\|\|)\s*(.+)$/);
+    if (logicMatch) {
+      const left = logicMatch[1].trim();
+      const operator = logicMatch[2];
+      const right = logicMatch[3].trim();
+
+      return {
+        type: 'logic_operation',
+        fields: { OP: operator === '&&' ? 'AND' : 'OR' },
+        inputs: {
+          A: this.parseExpression(left),
+          B: this.parseExpression(right)
+        }
+      };
+    }
+
+    // 10. 邏輯非 (!expr)
+    const notMatch = expr.match(/^!\s*(.+)$/);
+    if (notMatch) {
+      const innerExpr = notMatch[1].trim();
+      return {
+        type: 'logic_negate',
+        fields: {},
+        inputs: {
+          BOOL: this.parseExpression(innerExpr)
+        }
+      };
+    }
+
+    // 11. 變數名稱
+    if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(expr)) {
+      return {
+        type: 'variables_get',
+        fields: { VAR: this.validateVariableName(expr, 'var') },
+        inputs: {}
+      };
+    }
+
+    // 12. 函數調用 (如自定義函數)
+    const functionMatch = expr.match(/^[a-zA-Z_]\w*\s*\([^)]*\)$/);
+    if (functionMatch) {
+      return {
+        type: 'arduino_raw_expression',
+        fields: { CODE: expr },
+        inputs: {}
+      };
+    }
+
+    // 13. 括號表達式 (expr)
+    if (expr.startsWith('(') && expr.endsWith(')')) {
+      const innerExpr = expr.slice(1, -1).trim();
+      return this.parseExpression(innerExpr);
+    }
+
+    // 14. 無法識別的表達式 - 使用萬用表達式積木
+    console.log('Unable to parse expression, using raw expression block:', expr);
+    return {
+      type: 'arduino_raw_expression',
+      fields: { CODE: expr },
+      inputs: {}
+    };
+  }
+
+  /**
+   * 解析值表達式 (保持向後相容)
    */
   private parseValue(value: string): ParsedBlock | null {
+    return this.parseExpression(value);
+  }
+
+  /**
+   * 原始parseValue方法的備份版本
+   */
+  private parseValueOriginal(value: string): ParsedBlock | null {
     value = value.trim();
 
     // 數字
@@ -464,23 +661,44 @@ export class ArduinoCodeParser {
   private parseStatement(statement: string): ParsedBlock | null {
     // 移除分號
     const cleanStatement = statement.replace(/;$/, '').trim();
+    if (!cleanStatement) return null;
 
-    // 變數宣告與賦值 (int var = value)
-    const varDeclareMatch = cleanStatement.match(/^(int|float|char|boolean)\s+([a-zA-Z_]\w*)\s*=\s*(.+)$/);
-    if (varDeclareMatch) {
-      const variable = this.validateVariableName(varDeclareMatch[2], 'variable');
-      const value = varDeclareMatch[3];
+    // 1. 變數宣告與定義 (int var = value) - 使用 variables_define
+    const varDefineMatch = cleanStatement.match(/^(int|float|char|boolean|String)\s+([a-zA-Z_]\w*)\s*=\s*(.+)$/);
+    if (varDefineMatch) {
+      const type = varDefineMatch[1];
+      const variable = this.validateVariableName(varDefineMatch[2], 'variable');
+      const value = varDefineMatch[3];
 
       return {
-        type: 'variables_set',
-        fields: { VAR: variable },
+        type: 'variables_define',
+        fields: {
+          TYPE: type,
+          VAR: variable
+        },
         inputs: {
-          VALUE: this.parseValue(value)
+          VALUE: this.parseExpression(value)
         }
       };
     }
 
-    // 變數賦值
+    // 2. 變數宣告 (int var) - 使用 variables_declare
+    const varDeclareMatch = cleanStatement.match(/^(int|float|char|boolean|String)\s+([a-zA-Z_]\w*)$/);
+    if (varDeclareMatch) {
+      const type = varDeclareMatch[1];
+      const variable = this.validateVariableName(varDeclareMatch[2], 'variable');
+
+      return {
+        type: 'variables_declare',
+        fields: {
+          TYPE: type,
+          VAR: variable
+        },
+        inputs: {}
+      };
+    }
+
+    // 3. 變數賦值
     const variableAssignMatch = cleanStatement.match(/^([a-zA-Z_]\w*)\s*=\s*(.+)$/);
     if (variableAssignMatch) {
       const variable = this.validateVariableName(variableAssignMatch[1], 'variable');
@@ -490,87 +708,167 @@ export class ArduinoCodeParser {
         type: 'variables_set',
         fields: { VAR: variable },
         inputs: {
-          VALUE: this.parseValue(value)
+          VALUE: this.parseExpression(value)
         }
       };
     }
 
-    // digitalWrite(pin, state)
-    const digitalWriteMatch = cleanStatement.match(/digitalWrite\s*\(\s*(\d+)\s*,\s*(HIGH|LOW|0|1)\s*\)/);
+    // 4. digitalWrite(pin, state) - 支援表達式輸入
+    const digitalWriteMatch = cleanStatement.match(/digitalWrite\s*\(\s*([^,]+)\s*,\s*(HIGH|LOW|0|1|\d+|[a-zA-Z_]\w*)\s*\)/);
     if (digitalWriteMatch) {
-      const pin = this.validateNumber(digitalWriteMatch[1], '13', 0, 53);
-      let state = digitalWriteMatch[2];
+      const pin = digitalWriteMatch[1].trim();
+      let state = digitalWriteMatch[2].trim();
+
+      // 標準化狀態值
       if (state === '1') state = 'HIGH';
       if (state === '0') state = 'LOW';
 
+      // 如果狀態是 HIGH/LOW，使用下拉選單，否則使用表達式
+      if (state === 'HIGH' || state === 'LOW') {
+        return {
+          type: 'arduino_digitalwrite',
+          fields: { STATE: state },
+          inputs: {
+            PIN: this.parseExpression(pin)
+          }
+        };
+      } else {
+        // 使用萬用積木處理非標準狀態
+        return {
+          type: 'arduino_raw_statement',
+          fields: { CODE: cleanStatement },
+          inputs: {}
+        };
+      }
+    }
+
+    // 5. digitalRead(pin)
+    const digitalReadMatch = cleanStatement.match(/digitalRead\s*\(\s*([^)]+)\s*\)/);
+    if (digitalReadMatch) {
+      // digitalRead 通常在表達式中使用，但如果單獨一行，使用萬用積木
       return {
-        type: 'arduino_digitalwrite',
-        fields: {
-          PIN: pin,
-          STATE: state
-        },
+        type: 'arduino_raw_statement',
+        fields: { CODE: cleanStatement },
         inputs: {}
       };
     }
 
-    // pinMode(pin, mode)
-    const pinModeMatch = cleanStatement.match(/pinMode\s*\(\s*(\d+)\s*,\s*(INPUT|OUTPUT|INPUT_PULLUP)\s*\)/);
+    // 6. pinMode(pin, mode) - 支援表達式輸入
+    const pinModeMatch = cleanStatement.match(/pinMode\s*\(\s*([^,]+)\s*,\s*(INPUT|OUTPUT|INPUT_PULLUP)\s*\)/);
     if (pinModeMatch) {
+      const pin = pinModeMatch[1].trim();
+      const mode = pinModeMatch[2];
+
       return {
         type: 'arduino_pinmode',
-        fields: {
-          PIN: this.validateNumber(pinModeMatch[1], '13', 0, 53),
-          MODE: pinModeMatch[2]
-        },
-        inputs: {}
+        fields: { MODE: mode },
+        inputs: {
+          PIN: this.parseExpression(pin)
+        }
       };
     }
 
-    // analogWrite(pin, value)
-    const analogWriteMatch = cleanStatement.match(/analogWrite\s*\(\s*(\d+)\s*,\s*(.+)\s*\)/);
+    // 7. analogWrite(pin, value) - 支援表達式輸入
+    const analogWriteMatch = cleanStatement.match(/analogWrite\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)/);
     if (analogWriteMatch) {
-      const pin = this.validateNumber(analogWriteMatch[1], '9', 0, 53);
-      const value = this.validateNumber(analogWriteMatch[2], '128', 0, 255);
+      const pin = analogWriteMatch[1].trim();
+      const value = analogWriteMatch[2].trim();
 
       return {
         type: 'arduino_analogwrite',
-        fields: {
-          PIN: pin,
-          VALUE: value
-        },
+        fields: {},
+        inputs: {
+          PIN: this.parseExpression(pin),
+          VALUE: this.parseExpression(value)
+        }
+      };
+    }
+
+    // 8. analogRead(pin)
+    const analogReadMatch = cleanStatement.match(/analogRead\s*\(\s*([^)]+)\s*\)/);
+    if (analogReadMatch) {
+      // analogRead 通常在表達式中使用，但如果單獨一行，使用萬用積木
+      return {
+        type: 'arduino_raw_statement',
+        fields: { CODE: cleanStatement },
         inputs: {}
       };
     }
 
-    // delay(time)
-    const delayMatch = cleanStatement.match(/delay\s*\(\s*(.+)\s*\)/);
+    // 9. delay(time) - 支援表達式輸入
+    const delayMatch = cleanStatement.match(/delay\s*\(\s*([^)]+)\s*\)/);
     if (delayMatch) {
-      const time = this.validateNumber(delayMatch[1], '1000', 0);
+      const time = delayMatch[1].trim();
 
-      return {
-        type: 'arduino_delay',
-        fields: {
-          TIME: time
-        },
-        inputs: {}
-      };
+      // 如果是純數字，使用 field，否則使用 input
+      if (/^\d+$/.test(time)) {
+        return {
+          type: 'arduino_delay',
+          fields: { TIME: parseInt(time) },
+          inputs: {}
+        };
+      } else {
+        // 使用萬用積木處理表達式延遲
+        return {
+          type: 'arduino_raw_statement',
+          fields: { CODE: cleanStatement },
+          inputs: {}
+        };
+      }
     }
 
-    // delayMicroseconds(time)
-    const delayMicroMatch = cleanStatement.match(/delayMicroseconds\s*\(\s*(.+)\s*\)/);
+    // 10. delayMicroseconds(time) - 支援表達式輸入
+    const delayMicroMatch = cleanStatement.match(/delayMicroseconds\s*\(\s*([^)]+)\s*\)/);
     if (delayMicroMatch) {
-      const time = this.validateNumber(delayMicroMatch[1], '1000', 0, 16383);
+      const time = delayMicroMatch[1].trim();
 
+      // 如果是純數字，使用 field，否則使用萬用積木
+      if (/^\d+$/.test(time)) {
+        return {
+          type: 'arduino_delayMicroseconds',
+          fields: { TIME: parseInt(time) },
+          inputs: {}
+        };
+      } else {
+        return {
+          type: 'arduino_raw_statement',
+          fields: { CODE: cleanStatement },
+          inputs: {}
+        };
+      }
+    }
+
+    // 11. Serial.begin(baudrate)
+    const serialBeginMatch = cleanStatement.match(/Serial\.begin\s*\(\s*([^)]+)\s*\)/);
+    if (serialBeginMatch) {
       return {
-        type: 'arduino_delayMicroseconds',
-        fields: {
-          TIME: time
-        },
+        type: 'arduino_raw_statement',
+        fields: { CODE: cleanStatement },
         inputs: {}
       };
     }
 
-    // 如果無法解析，使用萬用積木
+    // 12. Serial.print/println
+    const serialPrintMatch = cleanStatement.match(/Serial\.(print|println)\s*\(\s*(.+)\s*\)/);
+    if (serialPrintMatch) {
+      return {
+        type: 'arduino_raw_statement',
+        fields: { CODE: cleanStatement },
+        inputs: {}
+      };
+    }
+
+    // 13. 函數調用 (function())
+    const functionCallMatch = cleanStatement.match(/^[a-zA-Z_]\w*\s*\([^)]*\)$/);
+    if (functionCallMatch) {
+      return {
+        type: 'arduino_raw_statement',
+        fields: { CODE: cleanStatement },
+        inputs: {}
+      };
+    }
+
+    // 14. 其他複合語句或無法識別的語句 - 使用萬用積木
     console.log('Unable to parse statement, using raw code block:', cleanStatement);
     return {
       type: 'arduino_raw_statement',
@@ -958,7 +1256,7 @@ export class ArduinoCodeParser {
     for (const [inputName, inputValue] of Object.entries(block.inputs)) {
       if (inputValue) {
         if (Array.isArray(inputValue)) {
-          // 語句輸入（如 if 的 DO, ELSE）
+          // 語句輸入（如 if 的 DO0, ELSE）
           if (inputValue.length > 0) {
             xmlParts.push(`${spaces}  <statement name="${inputName}">`);
             xmlParts.push(this.generateBlockChain(inputValue, indent + 4));
@@ -968,6 +1266,13 @@ export class ArduinoCodeParser {
           // 值輸入（如條件、數值） - 遞歸調用
           xmlParts.push(`${spaces}  <value name="${inputName}">`);
           xmlParts.push(this.generateSingleBlock(inputValue, indent + 4));
+          xmlParts.push(`${spaces}  </value>`);
+        } else if (typeof inputValue === 'string') {
+          // 簡單字串值 - 創建文字積木
+          xmlParts.push(`${spaces}  <value name="${inputName}">`);
+          xmlParts.push(`${spaces}    <block type="text">`);
+          xmlParts.push(`${spaces}      <field name="TEXT">${inputValue}</field>`);
+          xmlParts.push(`${spaces}    </block>`);
           xmlParts.push(`${spaces}  </value>`);
         }
       }

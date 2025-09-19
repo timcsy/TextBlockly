@@ -246,6 +246,74 @@ export class ArduinoCodeGenerator {
         return this.generateVariablesGet(block);
       case 'variables_set':
         return this.generateVariablesSet(block, indent);
+      case 'variables_declare':
+        return this.generateVariablesDeclare(block, indent);
+      case 'variables_define':
+        return this.generateVariablesDefine(block, indent);
+
+      // Serial 通訊積木
+      case 'arduino_serial_begin':
+        return this.generateSerialBegin(block, indent);
+      case 'arduino_serial_print':
+        return this.generateSerialPrint(block, indent);
+      case 'arduino_serial_available':
+        return 'Serial.available()';
+      case 'arduino_serial_read':
+        return 'Serial.read()';
+      case 'arduino_serial_read_string':
+        return 'Serial.readString()';
+
+      // Arduino 數學函數積木
+      case 'arduino_map':
+        return this.generateMap(block);
+      case 'arduino_constrain':
+        return this.generateConstrain(block);
+      case 'arduino_min':
+        return this.generateMin(block);
+      case 'arduino_max':
+        return this.generateMax(block);
+      case 'arduino_abs':
+        return this.generateAbs(block);
+      case 'arduino_pow':
+        return this.generatePow(block);
+      case 'arduino_sqrt':
+        return this.generateSqrt(block);
+
+      // Arduino 時間函數積木
+      case 'arduino_millis':
+        return 'millis()';
+      case 'arduino_micros':
+        return 'micros()';
+
+      // Arduino 隨機數積木
+      case 'arduino_random':
+        return this.generateRandom(block);
+      case 'arduino_random_seed':
+        return this.generateRandomSeed(block, indent);
+
+      // 文字處理積木
+      case 'text_string':
+        return this.generateTextString(block);
+      case 'text_join':
+        return this.generateTextJoin(block);
+      case 'text_length':
+        return this.generateTextLength(block);
+      case 'text_isEmpty':
+        return this.generateTextIsEmpty(block);
+      case 'text_indexOf':
+        return this.generateTextIndexOf(block);
+      case 'text_charAt':
+        return this.generateTextCharAt(block);
+      case 'text_substring':
+        return this.generateTextSubstring(block);
+      case 'text_changeCase':
+        return this.generateTextChangeCase(block);
+      case 'text_trim':
+        return this.generateTextTrim(block);
+      case 'text_replace':
+        return this.generateTextReplace(block);
+      case 'text_number_conversion':
+        return this.generateTextNumberConversion(block);
 
       default:
         console.warn(`Unknown block type: ${blockType}`);
@@ -840,5 +908,161 @@ void loop() {
   digitalWrite(13, LOW);
   delay(1000);
 }`;
+  }
+
+  // 新增的Arduino積木生成方法
+
+  // 變數積木
+  private generateVariablesDeclare(block: any, indent: string): string {
+    const type = block.getFieldValue('TYPE') || 'int';
+    const name = this.validateVariableName(block.getFieldValue('VAR'), 'myVar');
+    return `${indent}${type} ${name};`;
+  }
+
+  private generateVariablesDefine(block: any, indent: string): string {
+    const type = block.getFieldValue('TYPE') || 'int';
+    const name = this.validateVariableName(block.getFieldValue('VAR'), 'myVar');
+    const value = this.generateValueCode(block.getInputTargetBlock('VALUE')) || '0';
+    return `${indent}${type} ${name} = ${value};`;
+  }
+
+  // Serial 通訊積木
+  private generateSerialBegin(block: any, indent: string): string {
+    const baud = this.generateValueCode(block.getInputTargetBlock('BAUD')) || '9600';
+    return `${indent}Serial.begin(${baud});`;
+  }
+
+  private generateSerialPrint(block: any, indent: string): string {
+    const mode = block.getFieldValue('MODE') || 'PRINT';
+    const text = this.generateValueCode(block.getInputTargetBlock('TEXT')) || '""';
+    const methodName = mode === 'PRINTLN' ? 'println' : 'print';
+    return `${indent}Serial.${methodName}(${text});`;
+  }
+
+  // Arduino 數學函數積木
+  private generateMap(block: any): string {
+    const value = this.generateValueCode(block.getInputTargetBlock('VALUE')) || '0';
+    const fromLow = this.generateValueCode(block.getInputTargetBlock('FROM_LOW')) || '0';
+    const fromHigh = this.generateValueCode(block.getInputTargetBlock('FROM_HIGH')) || '1023';
+    const toLow = this.generateValueCode(block.getInputTargetBlock('TO_LOW')) || '0';
+    const toHigh = this.generateValueCode(block.getInputTargetBlock('TO_HIGH')) || '255';
+    return `map(${value}, ${fromLow}, ${fromHigh}, ${toLow}, ${toHigh})`;
+  }
+
+  private generateConstrain(block: any): string {
+    const value = this.generateValueCode(block.getInputTargetBlock('VALUE')) || '0';
+    const min = this.generateValueCode(block.getInputTargetBlock('MIN')) || '0';
+    const max = this.generateValueCode(block.getInputTargetBlock('MAX')) || '255';
+    return `constrain(${value}, ${min}, ${max})`;
+  }
+
+  private generateMin(block: any): string {
+    const a = this.generateValueCode(block.getInputTargetBlock('A')) || '0';
+    const b = this.generateValueCode(block.getInputTargetBlock('B')) || '0';
+    return `min(${a}, ${b})`;
+  }
+
+  private generateMax(block: any): string {
+    const a = this.generateValueCode(block.getInputTargetBlock('A')) || '0';
+    const b = this.generateValueCode(block.getInputTargetBlock('B')) || '0';
+    return `max(${a}, ${b})`;
+  }
+
+  private generateAbs(block: any): string {
+    const value = this.generateValueCode(block.getInputTargetBlock('VALUE')) || '0';
+    return `abs(${value})`;
+  }
+
+  private generatePow(block: any): string {
+    const base = this.generateValueCode(block.getInputTargetBlock('BASE')) || '2';
+    const exp = this.generateValueCode(block.getInputTargetBlock('EXPONENT')) || '2';
+    return `pow(${base}, ${exp})`;
+  }
+
+  private generateSqrt(block: any): string {
+    const value = this.generateValueCode(block.getInputTargetBlock('VALUE')) || '4';
+    return `sqrt(${value})`;
+  }
+
+  // Arduino 隨機數積木
+  private generateRandom(block: any): string {
+    const min = this.generateValueCode(block.getInputTargetBlock('MIN')) || '0';
+    const max = this.generateValueCode(block.getInputTargetBlock('MAX')) || '100';
+    return `random(${min}, ${max})`;
+  }
+
+  private generateRandomSeed(block: any, indent: string): string {
+    const seed = this.generateValueCode(block.getInputTargetBlock('SEED')) || 'analogRead(0)';
+    return `${indent}randomSeed(${seed});`;
+  }
+
+  // 文字處理積木
+  private generateTextString(block: any): string {
+    const value = block.getFieldValue('TEXT') || '';
+    return `"${value}"`;
+  }
+
+  private generateTextJoin(block: any): string {
+    const a = this.generateValueCode(block.getInputTargetBlock('A')) || '""';
+    const b = this.generateValueCode(block.getInputTargetBlock('B')) || '""';
+    return `(String(${a}) + String(${b}))`;
+  }
+
+  private generateTextLength(block: any): string {
+    const value = this.generateValueCode(block.getInputTargetBlock('VALUE')) || '""';
+    return `String(${value}).length()`;
+  }
+
+  private generateTextIsEmpty(block: any): string {
+    const value = this.generateValueCode(block.getInputTargetBlock('VALUE')) || '""';
+    return `(String(${value}).length() == 0)`;
+  }
+
+  private generateTextIndexOf(block: any): string {
+    const value = this.generateValueCode(block.getInputTargetBlock('VALUE')) || '""';
+    const find = this.generateValueCode(block.getInputTargetBlock('FIND')) || '""';
+    return `String(${value}).indexOf(String(${find}))`;
+  }
+
+  private generateTextCharAt(block: any): string {
+    const value = this.generateValueCode(block.getInputTargetBlock('VALUE')) || '""';
+    const at = this.generateValueCode(block.getInputTargetBlock('AT')) || '0';
+    return `String(${value}).charAt(${at})`;
+  }
+
+  private generateTextSubstring(block: any): string {
+    const string = this.generateValueCode(block.getInputTargetBlock('STRING')) || '""';
+    const from = this.generateValueCode(block.getInputTargetBlock('FROM')) || '0';
+    const to = this.generateValueCode(block.getInputTargetBlock('TO')) || '1';
+    return `String(${string}).substring(${from}, ${to})`;
+  }
+
+  private generateTextChangeCase(block: any): string {
+    const text = this.generateValueCode(block.getInputTargetBlock('TEXT')) || '""';
+    const caseMode = block.getFieldValue('CASE') || 'UPPERCASE';
+    const method = caseMode === 'UPPERCASE' ? 'toUpperCase' : 'toLowerCase';
+    return `String(${text}).${method}()`;
+  }
+
+  private generateTextTrim(block: any): string {
+    const text = this.generateValueCode(block.getInputTargetBlock('TEXT')) || '""';
+    return `String(${text}).trim()`;
+  }
+
+  private generateTextReplace(block: any): string {
+    const text = this.generateValueCode(block.getInputTargetBlock('TEXT')) || '""';
+    const from = this.generateValueCode(block.getInputTargetBlock('FROM')) || '""';
+    const to = this.generateValueCode(block.getInputTargetBlock('TO')) || '""';
+    return `String(${text}).replace(String(${from}), String(${to}))`;
+  }
+
+  private generateTextNumberConversion(block: any): string {
+    const value = this.generateValueCode(block.getInputTargetBlock('VALUE')) || '0';
+    const type = block.getFieldValue('TYPE') || 'STRING';
+    if (type === 'STRING') {
+      return `String(${value})`;
+    } else {
+      return `String(${value}).toInt()`;
+    }
   }
 }

@@ -2,7 +2,7 @@
   "name": "textblockly",
   "displayName": "TextBlockly",
   "description": "Arduino visual programming with Blockly integration and code synchronization",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "textblockly",
   "engines": {
     "vscode": "^1.74.0"

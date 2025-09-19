@@ -865,8 +865,19 @@
             const setupBlocks = workspace.getBlocksByType('arduino_setup');
             const loopBlocks = workspace.getBlocksByType('arduino_loop');
 
-            // 收集全域變數定義
-            const globalVarBlocks = workspace.getBlocksByType('variables_define');
+            // 收集全域變數定義 - 只收集不在 setup 或 loop 函數內的變數
+            const allVarBlocks = workspace.getBlocksByType('variables_define');
+            const globalVarBlocks = allVarBlocks.filter(block => {
+                // 檢查變數是否在 setup 或 loop 函數內
+                let parentBlock = block.getParent();
+                while (parentBlock) {
+                    if (parentBlock.type === 'arduino_setup' || parentBlock.type === 'arduino_loop') {
+                        return false; // 在函數內，不是全域變數
+                    }
+                    parentBlock = parentBlock.getParent();
+                }
+                return true; // 不在函數內，是全域變數
+            });
 
             let globalVarCode = '';
             if (globalVarBlocks.length > 0) {
@@ -967,8 +978,8 @@ ${formattedLoopCode}
 
                 case 'arduino_pinmode':
                     const modePin = generateValueCode(block.getInputTargetBlock('PIN')) || '13';
-                    const mode = block.getFieldValue('MODE') || 'OUTPUT';
-                    return `${indent}pinMode(${modePin}, ${mode});`;
+                    const pinMode = block.getFieldValue('MODE') || 'OUTPUT';
+                    return `${indent}pinMode(${modePin}, ${pinMode});`;
 
                 case 'arduino_analogread':
                     const analogPin = generateValueCode(block.getInputTargetBlock('PIN')) || 'A0';
@@ -1007,6 +1018,140 @@ ${formattedLoopCode}
                 case 'arduino_delayMicroseconds':
                     const microTime = validateNumber(block.getFieldValue('TIME'), '1000', 0, 16383);
                     return `${indent}delayMicroseconds(${microTime});`;
+
+                // Serial 通訊積木
+                case 'arduino_serial_begin':
+                    const baudRate = generateValueCode(block.getInputTargetBlock('BAUD')) || '9600';
+                    return `${indent}Serial.begin(${baudRate});`;
+
+                case 'arduino_serial_print':
+                    const mode = block.getFieldValue('MODE') || 'PRINT';
+                    const text = generateValueCode(block.getInputTargetBlock('TEXT')) || '""';
+                    const methodName = mode === 'PRINTLN' ? 'println' : 'print';
+                    return `${indent}Serial.${methodName}(${text});`;
+
+                case 'arduino_serial_available':
+                    return 'Serial.available()';
+
+                case 'arduino_serial_read':
+                    return 'Serial.read()';
+
+                case 'arduino_serial_read_string':
+                    return 'Serial.readString()';
+
+                // Arduino 數學函數積木
+                case 'arduino_map':
+                    const mapValue = generateValueCode(block.getInputTargetBlock('VALUE')) || '0';
+                    const fromLow = generateValueCode(block.getInputTargetBlock('FROM_LOW')) || '0';
+                    const fromHigh = generateValueCode(block.getInputTargetBlock('FROM_HIGH')) || '1023';
+                    const toLow = generateValueCode(block.getInputTargetBlock('TO_LOW')) || '0';
+                    const toHigh = generateValueCode(block.getInputTargetBlock('TO_HIGH')) || '255';
+                    return `map(${mapValue}, ${fromLow}, ${fromHigh}, ${toLow}, ${toHigh})`;
+
+                case 'arduino_constrain':
+                    const constrainValue = generateValueCode(block.getInputTargetBlock('VALUE')) || '0';
+                    const minValue = generateValueCode(block.getInputTargetBlock('MIN')) || '0';
+                    const maxValue = generateValueCode(block.getInputTargetBlock('MAX')) || '255';
+                    return `constrain(${constrainValue}, ${minValue}, ${maxValue})`;
+
+                case 'arduino_min':
+                    const minA = generateValueCode(block.getInputTargetBlock('A')) || '0';
+                    const minB = generateValueCode(block.getInputTargetBlock('B')) || '0';
+                    return `min(${minA}, ${minB})`;
+
+                case 'arduino_max':
+                    const maxA = generateValueCode(block.getInputTargetBlock('A')) || '0';
+                    const maxB = generateValueCode(block.getInputTargetBlock('B')) || '0';
+                    return `max(${maxA}, ${maxB})`;
+
+                case 'arduino_abs':
+                    const absValue = generateValueCode(block.getInputTargetBlock('VALUE')) || '0';
+                    return `abs(${absValue})`;
+
+                case 'arduino_pow':
+                    const powBase = generateValueCode(block.getInputTargetBlock('BASE')) || '2';
+                    const powExp = generateValueCode(block.getInputTargetBlock('EXPONENT')) || '2';
+                    return `pow(${powBase}, ${powExp})`;
+
+                case 'arduino_sqrt':
+                    const sqrtValue = generateValueCode(block.getInputTargetBlock('VALUE')) || '4';
+                    return `sqrt(${sqrtValue})`;
+
+                // Arduino 時間函數積木
+                case 'arduino_millis':
+                    return 'millis()';
+
+                case 'arduino_micros':
+                    return 'micros()';
+
+                // Arduino 隨機數積木
+                case 'arduino_random':
+                    const randomMin = generateValueCode(block.getInputTargetBlock('MIN')) || '0';
+                    const randomMax = generateValueCode(block.getInputTargetBlock('MAX')) || '100';
+                    return `random(${randomMin}, ${randomMax})`;
+
+                case 'arduino_random_seed':
+                    const seed = generateValueCode(block.getInputTargetBlock('SEED')) || 'analogRead(0)';
+                    return `${indent}randomSeed(${seed});`;
+
+                // 文字處理積木
+                case 'text_string':
+                    const stringValue = block.getFieldValue('TEXT') || '';
+                    return `"${stringValue}"`;
+
+                case 'text_join':
+                    const textA = generateValueCode(block.getInputTargetBlock('A')) || '""';
+                    const textB = generateValueCode(block.getInputTargetBlock('B')) || '""';
+                    return `(String(${textA}) + String(${textB}))`;
+
+                case 'text_length':
+                    const lengthValue = generateValueCode(block.getInputTargetBlock('VALUE')) || '""';
+                    return `String(${lengthValue}).length()`;
+
+                case 'text_isEmpty':
+                    const emptyValue = generateValueCode(block.getInputTargetBlock('VALUE')) || '""';
+                    return `(String(${emptyValue}).length() == 0)`;
+
+                case 'text_indexOf':
+                    const searchValue = generateValueCode(block.getInputTargetBlock('VALUE')) || '""';
+                    const findValue = generateValueCode(block.getInputTargetBlock('FIND')) || '""';
+                    return `String(${searchValue}).indexOf(String(${findValue}))`;
+
+                case 'text_charAt':
+                    const charValue = generateValueCode(block.getInputTargetBlock('VALUE')) || '""';
+                    const charAt = generateValueCode(block.getInputTargetBlock('AT')) || '0';
+                    return `String(${charValue}).charAt(${charAt})`;
+
+                case 'text_substring':
+                    const subString = generateValueCode(block.getInputTargetBlock('STRING')) || '""';
+                    const subFrom = generateValueCode(block.getInputTargetBlock('FROM')) || '0';
+                    const subTo = generateValueCode(block.getInputTargetBlock('TO')) || '1';
+                    return `String(${subString}).substring(${subFrom}, ${subTo})`;
+
+                case 'text_changeCase':
+                    const caseText = generateValueCode(block.getInputTargetBlock('TEXT')) || '""';
+                    const caseMode = block.getFieldValue('CASE') || 'UPPERCASE';
+                    const caseMethod = caseMode === 'UPPERCASE' ? 'toUpperCase' : 'toLowerCase';
+                    return `String(${caseText}).${caseMethod}()`;
+
+                case 'text_trim':
+                    const trimText = generateValueCode(block.getInputTargetBlock('TEXT')) || '""';
+                    return `String(${trimText}).trim()`;
+
+                case 'text_replace':
+                    const replaceText = generateValueCode(block.getInputTargetBlock('TEXT')) || '""';
+                    const replaceFrom = generateValueCode(block.getInputTargetBlock('FROM')) || '""';
+                    const replaceTo = generateValueCode(block.getInputTargetBlock('TO')) || '""';
+                    return `String(${replaceText}).replace(String(${replaceFrom}), String(${replaceTo}))`;
+
+                case 'text_number_conversion':
+                    const convertValue = generateValueCode(block.getInputTargetBlock('VALUE')) || '0';
+                    const convertType = block.getFieldValue('TYPE') || 'STRING';
+                    if (convertType === 'STRING') {
+                        return `String(${convertValue})`;
+                    } else {
+                        return `String(${convertValue}).toInt()`;
+                    }
 
                 // 控制流程積木
                 case 'controls_if':
@@ -1260,6 +1405,14 @@ ${formattedLoopCode}
                 return defaultName;
             }
 
+            // 嘗試從 workspace 中獲取變數的實際名稱
+            if (workspace) {
+                const variable = workspace.getVariableById(name);
+                if (variable && variable.name) {
+                    name = variable.name;
+                }
+            }
+
             // 移除無效字符，只保留字母、數字和底線
             let cleanName = name.replace(/[^a-zA-Z0-9_]/g, '');
 
@@ -1434,12 +1587,51 @@ ${formattedLoopCode}
                 case 'loadWorkspace':
                     if (message.data && message.data.xml) {
                         console.log('Loading workspace from XML:', message.data.xml.substring(0, 200));
+                        console.log('Full XML length:', message.data.xml.length);
+
+                        // 檢查XML中是否包含loop內容
+                        if (message.data.xml.includes('LOOP_CODE')) {
+                            console.log('✅ XML contains LOOP_CODE section');
+                            if (message.data.xml.includes('variables_define')) {
+                                console.log('✅ XML contains variables_define blocks');
+                            } else {
+                                console.log('❌ XML missing variables_define blocks');
+                            }
+                            if (message.data.xml.includes('arduino_serial_print')) {
+                                console.log('✅ XML contains arduino_serial_print blocks');
+                            } else {
+                                console.log('❌ XML missing arduino_serial_print blocks');
+                            }
+                        } else {
+                            console.log('❌ XML missing LOOP_CODE section');
+                        }
+
                         try {
                             // 暫時禁用工作區變更事件以防止循環
                             workspace.removeChangeListener(onWorkspaceChange);
 
                             // 清空現有工作區
                             workspace.clear();
+
+                            // 預處理變數：在載入 XML 之前創建所有變數
+                            const varMatches = message.data.xml.match(/<field name="VAR">([^<]+)<\/field>/g);
+                            if (varMatches) {
+                                const uniqueVars = new Set();
+                                varMatches.forEach(match => {
+                                    const varName = match.match(/<field name="VAR">([^<]+)<\/field>/)[1];
+                                    uniqueVars.add(varName);
+                                });
+
+                                console.log('📋 Creating variables before XML load:', Array.from(uniqueVars));
+                                uniqueVars.forEach(varName => {
+                                    try {
+                                        // 創建變數，變數名稱和 ID 都使用同一個名稱
+                                        workspace.createVariable(varName, null, varName);
+                                    } catch (error) {
+                                        console.log('變數創建失敗:', varName, error);
+                                    }
+                                });
+                            }
 
                             // 載入新的工作區 - 使用不同的 API 方法
                             let xml;
@@ -1510,6 +1702,34 @@ ${formattedLoopCode}
                             // 重新啟用變更事件
                             setTimeout(() => {
                                 workspace.addChangeListener(onWorkspaceChange);
+
+                                // 檢查載入結果
+                                const allBlocks = workspace.getAllBlocks();
+                                console.log(`📊 Workspace loaded with ${allBlocks.length} total blocks`);
+
+                                const setupBlocks = allBlocks.filter(block => block.type === 'arduino_setup');
+                                const loopBlocks = allBlocks.filter(block => block.type === 'arduino_loop');
+                                console.log(`- Setup blocks: ${setupBlocks.length}`);
+                                console.log(`- Loop blocks: ${loopBlocks.length}`);
+
+                                // 檢查loop積木的內容
+                                if (loopBlocks.length > 0) {
+                                    const loopBlock = loopBlocks[0];
+                                    const loopConnection = loopBlock.getInput('LOOP_CODE');
+                                    if (loopConnection && loopConnection.connection && loopConnection.connection.targetBlock()) {
+                                        const connectedBlocks = [];
+                                        let currentBlock = loopConnection.connection.targetBlock();
+                                        while (currentBlock) {
+                                            connectedBlocks.push(currentBlock.type);
+                                            currentBlock = currentBlock.getNextBlock();
+                                        }
+                                        console.log(`🔗 Loop contains blocks: ${connectedBlocks.join(' → ')}`);
+                                    } else {
+                                        console.log('❌ Loop block has no connected blocks');
+                                    }
+                                }
+
+                                updateBlockCount();
                             }, 100);
 
                             console.log('Workspace loaded successfully');

@@ -26,6 +26,11 @@ export class ArduinoBlocks {
     return [
       ...this.getDigitalIOBlocks(),
       ...this.getAnalogIOBlocks(),
+      ...this.getSerialBlocks(),
+      ...this.getTextBlocks(),
+      ...this.getMathBlocks(),
+      ...this.getTimeBlocks(),
+      ...this.getRandomBlocks(),
       ...this.getControlFlowBlocks(),
       ...this.getStructureBlocks(),
       ...this.getVariableBlocks(),
@@ -308,6 +313,572 @@ export class ArduinoBlocks {
   }
 
   /**
+   * Serial 通訊積木
+   */
+  static getSerialBlocks(): BlockDefinition[] {
+    return [
+      {
+        type: 'arduino_serial_begin',
+        message0: 'Serial.begin 鮑率 %1',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'BAUD',
+            check: 'Number',
+            shadow: {
+              type: 'math_number',
+              fields: {
+                NUM: 9600
+              }
+            }
+          },
+        ],
+        inputsInline: true,
+        previousStatement: null,
+        nextStatement: null,
+        colour: 120,
+        tooltip: '初始化Serial通訊，設定鮑率',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/communication/serial/begin/',
+      },
+      {
+        type: 'arduino_serial_print',
+        message0: 'Serial.%1 %2',
+        args0: [
+          {
+            type: 'field_dropdown',
+            name: 'MODE',
+            options: [
+              ['print', 'PRINT'],
+              ['println', 'PRINTLN'],
+            ],
+          },
+          {
+            type: 'input_value',
+            name: 'TEXT',
+            check: null,
+          },
+        ],
+        inputsInline: true,
+        previousStatement: null,
+        nextStatement: null,
+        colour: 120,
+        tooltip: '通過Serial發送文字或數據',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/communication/serial/print/',
+      },
+      {
+        type: 'arduino_serial_available',
+        message0: 'Serial.available',
+        args0: [],
+        output: 'Number',
+        colour: 120,
+        tooltip: '檢查Serial緩衝區是否有可讀取的資料',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/communication/serial/available/',
+      },
+      {
+        type: 'arduino_serial_read',
+        message0: 'Serial.read',
+        args0: [],
+        output: 'Number',
+        colour: 120,
+        tooltip: '從Serial緩衝區讀取一個位元組',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/communication/serial/read/',
+      },
+      {
+        type: 'arduino_serial_read_string',
+        message0: 'Serial.readString',
+        args0: [],
+        output: 'String',
+        colour: 120,
+        tooltip: '從Serial緩衝區讀取整個字串',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/communication/serial/readstring/',
+      },
+    ];
+  }
+
+  /**
+   * 文字處理積木
+   */
+  static getTextBlocks(): BlockDefinition[] {
+    return [
+      {
+        type: 'text_string',
+        message0: '"%1"',
+        args0: [
+          {
+            type: 'field_input',
+            name: 'TEXT',
+            text: 'Hello',
+          },
+        ],
+        output: 'String',
+        colour: 160,
+        tooltip: '文字字串',
+        helpUrl: '',
+      },
+      {
+        type: 'text_join',
+        message0: '連接 %1 %2',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'A',
+            check: 'String',
+          },
+          {
+            type: 'input_value',
+            name: 'B',
+            check: 'String',
+          },
+        ],
+        inputsInline: true,
+        output: 'String',
+        colour: 160,
+        tooltip: '連接兩個文字字串',
+        helpUrl: '',
+      },
+      {
+        type: 'text_length',
+        message0: '%1 的長度',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'VALUE',
+            check: 'String',
+          },
+        ],
+        output: 'Number',
+        colour: 160,
+        tooltip: '取得文字字串的長度',
+        helpUrl: '',
+      },
+      {
+        type: 'text_isEmpty',
+        message0: '%1 是空的',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'VALUE',
+            check: 'String',
+          },
+        ],
+        output: 'Boolean',
+        colour: 160,
+        tooltip: '檢查文字字串是否為空',
+        helpUrl: '',
+      },
+      {
+        type: 'text_indexOf',
+        message0: '在 %1 中找到 %2 的位置',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'VALUE',
+            check: 'String',
+          },
+          {
+            type: 'input_value',
+            name: 'FIND',
+            check: 'String',
+          },
+        ],
+        inputsInline: true,
+        output: 'Number',
+        colour: 160,
+        tooltip: '找到子字串在文字中的位置',
+        helpUrl: '',
+      },
+      {
+        type: 'text_charAt',
+        message0: '在 %1 的第 %2 個字元',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'VALUE',
+            check: 'String',
+          },
+          {
+            type: 'input_value',
+            name: 'AT',
+            check: 'Number',
+          },
+        ],
+        inputsInline: true,
+        output: 'String',
+        colour: 160,
+        tooltip: '取得文字中指定位置的字元',
+        helpUrl: '',
+      },
+      {
+        type: 'text_substring',
+        message0: '從 %1 擷取 第 %2 到 %3 個字元',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'STRING',
+            check: 'String',
+          },
+          {
+            type: 'input_value',
+            name: 'FROM',
+            check: 'Number',
+          },
+          {
+            type: 'input_value',
+            name: 'TO',
+            check: 'Number',
+          },
+        ],
+        inputsInline: true,
+        output: 'String',
+        colour: 160,
+        tooltip: '擷取文字的子字串',
+        helpUrl: '',
+      },
+      {
+        type: 'text_changeCase',
+        message0: '將 %1 轉為 %2',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'TEXT',
+            check: 'String',
+          },
+          {
+            type: 'field_dropdown',
+            name: 'CASE',
+            options: [
+              ['大寫', 'UPPERCASE'],
+              ['小寫', 'LOWERCASE'],
+            ],
+          },
+        ],
+        inputsInline: true,
+        output: 'String',
+        colour: 160,
+        tooltip: '轉換文字大小寫',
+        helpUrl: '',
+      },
+      {
+        type: 'text_trim',
+        message0: '移除 %1 的 %2',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'TEXT',
+            check: 'String',
+          },
+          {
+            type: 'field_dropdown',
+            name: 'MODE',
+            options: [
+              ['兩端空白', 'BOTH'],
+              ['左端空白', 'LEFT'],
+              ['右端空白', 'RIGHT'],
+            ],
+          },
+        ],
+        inputsInline: true,
+        output: 'String',
+        colour: 160,
+        tooltip: '移除文字兩端的空白字元',
+        helpUrl: '',
+      },
+      {
+        type: 'text_replace',
+        message0: '在 %1 中將 %2 替換為 %3',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'TEXT',
+            check: 'String',
+          },
+          {
+            type: 'input_value',
+            name: 'FROM',
+            check: 'String',
+          },
+          {
+            type: 'input_value',
+            name: 'TO',
+            check: 'String',
+          },
+        ],
+        inputsInline: true,
+        output: 'String',
+        colour: 160,
+        tooltip: '替換文字中的指定內容',
+        helpUrl: '',
+      },
+      {
+        type: 'text_number_conversion',
+        message0: '將 %1 轉為 %2',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'VALUE',
+            check: null,
+          },
+          {
+            type: 'field_dropdown',
+            name: 'TYPE',
+            options: [
+              ['文字', 'STRING'],
+              ['數字', 'NUMBER'],
+            ],
+          },
+        ],
+        inputsInline: true,
+        output: null,
+        colour: 160,
+        tooltip: '在文字和數字之間轉換',
+        helpUrl: '',
+      },
+    ];
+  }
+
+  /**
+   * Arduino 數學函數積木
+   */
+  static getMathBlocks(): BlockDefinition[] {
+    return [
+      {
+        type: 'arduino_map',
+        message0: 'map %1 從 %2 ~ %3 對應到 %4 ~ %5',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'VALUE',
+            check: 'Number',
+          },
+          {
+            type: 'input_value',
+            name: 'FROM_LOW',
+            check: 'Number',
+          },
+          {
+            type: 'input_value',
+            name: 'FROM_HIGH',
+            check: 'Number',
+          },
+          {
+            type: 'input_value',
+            name: 'TO_LOW',
+            check: 'Number',
+          },
+          {
+            type: 'input_value',
+            name: 'TO_HIGH',
+            check: 'Number',
+          },
+        ],
+        inputsInline: true,
+        output: 'Number',
+        colour: 230,
+        tooltip: '將數值從一個範圍映射到另一個範圍',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/math/map/',
+      },
+      {
+        type: 'arduino_constrain',
+        message0: 'constrain %1 在 %2 到 %3 之間',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'VALUE',
+            check: 'Number',
+          },
+          {
+            type: 'input_value',
+            name: 'MIN',
+            check: 'Number',
+          },
+          {
+            type: 'input_value',
+            name: 'MAX',
+            check: 'Number',
+          },
+        ],
+        inputsInline: true,
+        output: 'Number',
+        colour: 230,
+        tooltip: '限制數值在指定範圍內',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/math/constrain/',
+      },
+      {
+        type: 'arduino_min',
+        message0: 'min %1 %2',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'A',
+            check: 'Number',
+          },
+          {
+            type: 'input_value',
+            name: 'B',
+            check: 'Number',
+          },
+        ],
+        inputsInline: true,
+        output: 'Number',
+        colour: 230,
+        tooltip: '取得兩個數值中的較小值',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/math/min/',
+      },
+      {
+        type: 'arduino_max',
+        message0: 'max %1 %2',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'A',
+            check: 'Number',
+          },
+          {
+            type: 'input_value',
+            name: 'B',
+            check: 'Number',
+          },
+        ],
+        inputsInline: true,
+        output: 'Number',
+        colour: 230,
+        tooltip: '取得兩個數值中的較大值',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/math/max/',
+      },
+      {
+        type: 'arduino_abs',
+        message0: 'abs %1',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'VALUE',
+            check: 'Number',
+          },
+        ],
+        output: 'Number',
+        colour: 230,
+        tooltip: '取得數值的絕對值',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/math/abs/',
+      },
+      {
+        type: 'arduino_pow',
+        message0: 'pow %1 ^ %2',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'BASE',
+            check: 'Number',
+          },
+          {
+            type: 'input_value',
+            name: 'EXPONENT',
+            check: 'Number',
+          },
+        ],
+        inputsInline: true,
+        output: 'Number',
+        colour: 230,
+        tooltip: '計算冪次方',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/math/pow/',
+      },
+      {
+        type: 'arduino_sqrt',
+        message0: 'sqrt %1',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'VALUE',
+            check: 'Number',
+          },
+        ],
+        output: 'Number',
+        colour: 230,
+        tooltip: '計算平方根',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/math/sqrt/',
+      },
+    ];
+  }
+
+  /**
+   * Arduino 時間函數積木
+   */
+  static getTimeBlocks(): BlockDefinition[] {
+    return [
+      {
+        type: 'arduino_millis',
+        message0: 'millis',
+        args0: [],
+        output: 'Number',
+        colour: 120,
+        tooltip: '取得從程式開始執行到現在的毫秒數',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/time/millis/',
+      },
+      {
+        type: 'arduino_micros',
+        message0: 'micros',
+        args0: [],
+        output: 'Number',
+        colour: 120,
+        tooltip: '取得從程式開始執行到現在的微秒數',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/time/micros/',
+      },
+    ];
+  }
+
+  /**
+   * Arduino 隨機數積木
+   */
+  static getRandomBlocks(): BlockDefinition[] {
+    return [
+      {
+        type: 'arduino_random',
+        message0: 'random %1 到 %2',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'MIN',
+            check: 'Number',
+            shadow: {
+              type: 'math_number',
+              fields: { NUM: 0 }
+            }
+          },
+          {
+            type: 'input_value',
+            name: 'MAX',
+            check: 'Number',
+            shadow: {
+              type: 'math_number',
+              fields: { NUM: 100 }
+            }
+          },
+        ],
+        inputsInline: true,
+        output: 'Number',
+        colour: 300,
+        tooltip: '產生指定範圍內的隨機整數',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/random-numbers/random/',
+      },
+      {
+        type: 'arduino_random_seed',
+        message0: 'randomSeed %1',
+        args0: [
+          {
+            type: 'input_value',
+            name: 'SEED',
+            check: 'Number',
+          },
+        ],
+        previousStatement: null,
+        nextStatement: null,
+        colour: 300,
+        tooltip: '設定隨機數種子',
+        helpUrl: 'https://www.arduino.cc/reference/en/language/functions/random-numbers/randomseed/',
+      },
+    ];
+  }
+
+  /**
    * 控制流程積木
    */
   static getControlFlowBlocks(): BlockDefinition[] {
@@ -489,8 +1060,10 @@ export class ArduinoBlocks {
           },
         ],
         inputsInline: true,
+        previousStatement: null,
+        nextStatement: null,
         colour: 310,
-        tooltip: '定義指定類型的全域變數（在程式碼頂部）',
+        tooltip: '定義指定類型的變數',
         helpUrl: '',
       },
     ];
@@ -606,6 +1179,42 @@ export class ArduinoBlocks {
         },
         {
           kind: 'category',
+          name: 'Serial 通訊',
+          colour: '120',
+          contents: [
+            { kind: 'block', type: 'arduino_serial_begin' },
+            { kind: 'block', type: 'arduino_serial_print' },
+            { kind: 'block', type: 'arduino_serial_available' },
+            { kind: 'block', type: 'arduino_serial_read' },
+            { kind: 'block', type: 'arduino_serial_read_string' },
+          ],
+        },
+        {
+          kind: 'category',
+          name: '文字處理',
+          colour: '160',
+          contents: [
+            {
+              kind: 'block',
+              type: 'text_string',
+              fields: {
+                TEXT: 'Hello'
+              }
+            },
+            { kind: 'block', type: 'text_join' },
+            { kind: 'block', type: 'text_length' },
+            { kind: 'block', type: 'text_isEmpty' },
+            { kind: 'block', type: 'text_indexOf' },
+            { kind: 'block', type: 'text_charAt' },
+            { kind: 'block', type: 'text_substring' },
+            { kind: 'block', type: 'text_changeCase' },
+            { kind: 'block', type: 'text_trim' },
+            { kind: 'block', type: 'text_replace' },
+            { kind: 'block', type: 'text_number_conversion' },
+          ],
+        },
+        {
+          kind: 'category',
           name: '程式結構',
           colour: '290',
           contents: [
@@ -645,6 +1254,31 @@ export class ArduinoBlocks {
             { kind: 'block', type: 'math_single' },
             { kind: 'block', type: 'math_trig' },
             { kind: 'block', type: 'math_constant' },
+            { kind: 'block', type: 'arduino_map' },
+            { kind: 'block', type: 'arduino_constrain' },
+            { kind: 'block', type: 'arduino_min' },
+            { kind: 'block', type: 'arduino_max' },
+            { kind: 'block', type: 'arduino_abs' },
+            { kind: 'block', type: 'arduino_pow' },
+            { kind: 'block', type: 'arduino_sqrt' },
+          ],
+        },
+        {
+          kind: 'category',
+          name: '時間函數',
+          colour: '120',
+          contents: [
+            { kind: 'block', type: 'arduino_millis' },
+            { kind: 'block', type: 'arduino_micros' },
+          ],
+        },
+        {
+          kind: 'category',
+          name: '隨機數',
+          colour: '300',
+          contents: [
+            { kind: 'block', type: 'arduino_random' },
+            { kind: 'block', type: 'arduino_random_seed' },
           ],
         },
         {
